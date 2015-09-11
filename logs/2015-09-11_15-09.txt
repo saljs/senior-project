@@ -1,0 +1,11 @@
+Senior project log for 2015-09-11_15-09
+Time logged: 2.7
+
+Wrote my proposal and rationale. Found a starting place for research,
+Artificial Intelligence - A Modern Approach - 3rd edition. I then installed
+git on my server and set up this repository. I think it will be very useful to
+keep this project in a revision control system, which will allow me to see
+exactly the path it took as I go along. I then spent about half an hour
+reveiwing git commands and learning how to effectly use it to it's full
+potential. There were many useful features I had never used before. Next I
+will begin making an outline for the research phase of the project.
