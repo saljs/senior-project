@@ -1,0 +1,7 @@
+Senior project log for 2015-09-17_13-58
+Time logged: 1
+Started reading _Artificail Intelligence a Modern Approach_. Still on chapter
+1, I learned that my databadse idea falls under a "structured representation"
+of reality. I also learned the part of an AI that I don't have is a cognitive
+theory, something that was first mused about by Aristotole, and that I'll want
+to construct a weak method one.
