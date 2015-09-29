@@ -1,0 +1,9 @@
+Senior project log for 2015-09-29_14-18
+Time logged: 5h
+Read chapters 2+3. Chapter 2 focused on intelligent agents, and how the
+environment the agent was running in would affect the design of the agent. It
+also talked about how the agent would need to keep a model of its environment
+in memory. Chapter 3 was all about decision making using search algorithms,
+which find a number of steps to get to a goal state. I think the decision
+making system for my finished AI will be a lot more complex than I originally
+pictured, but certainly doable. Very excited! 
