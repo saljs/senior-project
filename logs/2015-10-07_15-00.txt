@@ -1,0 +1,7 @@
+Senior project log for 2015-10-07_15-00
+Time logged: 3h
+Read through chapter 4, which talked about Search algorithms that generate a
+series of actions instead of solving something. I then created a flowchart
+that better illustrates how my program will differentiate between the different
+tasks it has. I also started looking into possible live resources. Tomorrow
+I'm going to start coding a rough framework. 
