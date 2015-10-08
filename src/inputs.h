@@ -1,0 +1,1 @@
+#define NUMINPUTS 2

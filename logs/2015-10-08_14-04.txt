@@ -1,0 +1,7 @@
+Senior project log for 2015-10-08_14-04
+Time logged: 4h
+Fleshed out some of the database functions, got a better idea of how
+individual memory structures will be stored as a liked list in memory and
+rebuilt when the program is run. Figured out how the input functions and the
+database functions will communicate (probably will be changed a ton later, but
+for now it's a start).) 
