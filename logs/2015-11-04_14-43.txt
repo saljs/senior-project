@@ -1,0 +1,9 @@
+Senior project log for 2015-11-04_14-43
+Time logged: 15hrs
+Knocked out about 300 lines of code for saving the memory structure to the
+disk then rebuilding it on reload. Also had my legit proposal meeting, a bit
+of a formality, but I will admit I do have a better grasp on the path the
+project will take and the timeline since the original proposal was approved.
+I've also revised the memory structure quite a bit. So I have a couple more
+database functions, but then it's on to building a test input/output code base
+and a test agent, then actually compiling it all for the first time. 

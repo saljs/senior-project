@@ -1,0 +1,6 @@
+Senior project log for 2015-10-14_14-31
+Time logged: 3h
+I realized that I had made a pretty big oversight in my save to disk function,
+and was actually writing a pointer to the disk instead of the actual data. So
+I'm currently working to rewrite it, about 100x times more complex. On the
+upside I learned how to handle directories in C.
