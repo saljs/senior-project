@@ -52,6 +52,7 @@ typedef struct
 memList* newMemory(memList* start);
 void addInput(memList* current, input* toAdd, int index);
 void addAction(memList* current, action* toAdd, int index);
-memList* loadDatabase(const char* filename);
-int saveDatabase(const char* filename, memList* start);
+memList* loadDatabase(const char* basedir);
+int saveDatabase(const char* basedir, memList* start);
+void disassemble(memList* start);
 #endif

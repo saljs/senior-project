@@ -335,7 +335,7 @@ int saveDatabase(const char* basedir, memList* start)
                 return -2;
             }
             
-            input* nextAction = parser->mem->actions[i];
+            action* nextAction = parser->mem->actions[i];
             while(nextAction != NULL)
             {
                 if(fwrite(&nextAction->link, sizeof(long int), 1, actionDump) < sizeof(long int))
@@ -354,7 +354,7 @@ int saveDatabase(const char* basedir, memList* start)
                 {
                     return -2;
                 }
-                input* tmp = nextAction->next;
+                action* tmp = nextAction->next;
                 nextAction = tmp;
             }
         }
@@ -363,4 +363,42 @@ int saveDatabase(const char* basedir, memList* start)
     }
 }
 
-int freeMem(memList* start)
+void disassmeble(memList* start)
+{
+    memList* next = start;
+    memList* last = NULL;
+    while(next != NULL)
+    {
+        for(int i = 0; i < NUMINPUTS; i++)
+        {
+            input* nextInput = next->mem->inputs[i];
+            input* lastInput = NULL;
+            while(nextInput != NULL)
+            {
+                free(nextInput->data);
+                lastInput = nextInput;
+                input* tmp = nextInput->next;
+                nextInput = tmp;
+                free(lastInput);
+            }
+        }
+        for(int i = 0; i < NUMACTIONS; i++)
+        {
+            action* nextAction = next->mem->actions[i];
+            action* lastAction = NULL;
+            while(nextAction != NULL)
+            {
+                free(nextAction->data);
+                lastAction = nextAction;
+                action* tmp = nextAction->next;
+                nextAction = tmp;
+                free(lastAction);
+            }
+        }
+        last = next;
+        memList* tmp = next->next;
+        next = tmp;
+        free(last->mem);
+        free(last);
+    }
+}

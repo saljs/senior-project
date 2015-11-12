@@ -1,0 +1,7 @@
+Senior project log for 2015-11-12_13-23
+Time logged: 1hr
+Finished the disassemble function, which *should* be the last part of the
+database library. Now I'm going to work on writing a *very simple* agent, with
+two inputs and one output, just to test to see if everything will compile ok.
+If that all works I'll be ready to move on to something more complex that can
+actually test the effectiveness of the database structure. 
