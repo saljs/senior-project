@@ -1,0 +1,18 @@
+Senior project log for 2015-11-20_13-54
+Time logged: 7h
+Thought up a simple test of the code so far that will also allow to mess with
+OpenCV a bit. It will just be two input system, pictures with colored shapes
+and text. The inputs will then be processed, comparing the text with other
+words, and using FLANN feature matching and comparing histograms with the
+Bhattacharyya method. I will then hopefully to be able to train it to
+recognize and output chapes and colors. Not really stretching the algorithm to
+it's limits or anything, but a good simple proof of concept anyways. As for
+what I did during this time was to draw out some flowcharts, and experiment
+with OpenCV's various image comparrison methods before I settled on the two
+above. Some good resources I came across were:
+
+http://docs.opencv.org/master/d5/d6f/tutorial_feature_flann_matcher.html#gsc.tab=0
+http://www.cs.toronto.edu/~kyros/courses/2503/Handouts/features.pdf
+http://docs.opencv.org/2.4/doc/tutorials/imgproc/histograms/histogram_comparison/histogram_comparison.html
+https://en.wikipedia.org/wiki/Bhattacharyya_distance
+
