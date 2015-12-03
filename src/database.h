@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+
 #include "inputs.h"
 #include "outputs.h"
 
@@ -12,8 +13,8 @@
 #define INPUT 0
 #define OUTPUT 1
 
-typedef struct input input;
-typedef struct action action;
+typedef struct input;
+typedef struct action;
 struct input
 {
     char* data;
@@ -55,4 +56,5 @@ void addAction(memList* current, action* toAdd, int index);
 memList* loadDatabase(const char* basedir);
 int saveDatabase(const char* basedir, memList* start);
 void disassemble(memList* start);
+long int SearchDatabase(input pattern, memList* database);
 #endif

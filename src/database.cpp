@@ -402,3 +402,12 @@ void disassmeble(memList* start)
         free(last);
     }
 }
+
+long int SearchDatabase(input pattern, memList* database)
+{
+    float cost = 0, lastCost = 0, simConf = 0;
+    long int steps = 0, mostSim;
+    do
+    {
+        
+    } while(cost * STOP_LIMIT < lastCost);

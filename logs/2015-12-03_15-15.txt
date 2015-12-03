@@ -1,0 +1,6 @@
+Senior project log for 2015-12-03_15-15
+Time logged: 3
+Worked on creating default input functions and did a lot of off the hand type
+stuff for a depth first search algorithm, should work pretty well for testing
+when it's done but I'll want to optimize it a lot before I consider it truly
+done. 
