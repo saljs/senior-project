@@ -1,0 +1,9 @@
+Senior project log for 2016-01-05_14-57
+Time logged: 5
+Worked out a function for returning the most similar memory in the database
+given a specific input. It uses a tunable metric for stopping and branching,
+which I think will be great for performance. I also decided over winter break
+that the entire concept of storing actions was useless, seeing as the agent
+will need to be able to work without them in the first place, shouldn't be
+drawing on them much anyways, and they could always be stored in a new input
+if absolutely needed for something, so I removed actions from the code. 

@@ -1,1 +1,0 @@
-#define NUMOUTPUTS 1

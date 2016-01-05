@@ -4,7 +4,6 @@
 #include <errno.h>
 
 #include "inputs.h"
-#include "outputs.h"
 
 #ifndef DATABASE_H_
 #define DATABASE_H_
@@ -14,7 +13,6 @@
 #define OUTPUT 1
 
 typedef struct input;
-typedef struct action;
 struct input
 {
     char* data;
@@ -23,19 +21,10 @@ struct input
     float confidence;
     input* next;
 };
-struct action
-{
-    char* data;
-    size_t dataSize;
-    long int link;
-    float confidence;
-    action* next;
-};
 typedef struct 
 {
-    long uuid;
+    long int uuid;
     input* inputs[NUMINPUTS];
-    action* actions[NUMOUTPUTS];
 } memory;
 typedef struct memList;
 struct memList
@@ -46,15 +35,13 @@ struct memList
 typedef struct
 {
     unsigned int magicBits;
-    int type;
     int index;
 } magic;
 
 memList* newMemory(memList* start);
 void addInput(memList* current, input* toAdd, int index);
-void addAction(memList* current, action* toAdd, int index);
 memList* loadDatabase(const char* basedir);
 int saveDatabase(const char* basedir, memList* start);
 void disassemble(memList* start);
-long int SearchDatabase(input pattern, memList* database);
+long int SearchDatabase(input pattern, int type, memList* database);
 #endif

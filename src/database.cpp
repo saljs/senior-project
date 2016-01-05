@@ -19,10 +19,6 @@ memList* newMemory(memList* start)
     {
         newMem->inputs[i] = NULL;
     }
-    for(int i = 0; i < NUMOUTPUTS; i++)
-    {
-        newMem->actions[i] = NULL;
-    }
     memList* newStart = malloc(sizeof(memList));
     if(newStart == NULL)
     {
@@ -37,11 +33,6 @@ void addInput(memList* current, input* toAdd, int index)
 {
     toAdd->next = current->inputs[index];
     current->inputs[index] = toAdd;
-}
-void addAction(memList* current, action* toAdd, int index)
-{
-    toAdd->next = current->inputs[index];
-    current->actions[index] = toAdd;
 }
 
 memList* loadDatabase(const char* basedir)
@@ -88,7 +79,7 @@ memList* loadDatabase(const char* basedir)
         }
         free(filename);
         struct dirent* memfiles;
-        //loop through save files for inputs/action
+        //loop through save files for inputs
         while((memfiles = readdir(memdir)))
         {
             if(strcmp(memfiles->d_name, "."))
@@ -120,7 +111,7 @@ memList* loadDatabase(const char* basedir)
                 {
                     continue;
                 }
-                else if(magicBuff.type == INPUT)
+                else 
                 {
                     input* newInput = malloc(sizeof(input));
                     if(newInput == NULL)
@@ -168,58 +159,6 @@ memList* loadDatabase(const char* basedir)
                             return NULL;
                         }
                         lastInput->next = newInput;
-
-                    }
-                    newInput->next = NULL;
-                }
-                else if(magicBuff.type == OUTPUT)
-                {
-                    action* newAction = malloc(sizeof(action));
-                    if(newAction == NULL)
-                    {
-                        return NULL;
-                    }
-                    action* lastAction = NULL;
-                    newMem->actions[magicBuff.index] = newAction;
-                    //loop through to rebuild linked list
-                    while(fread(&newAction->link, sizeof(long int), 1, savefile) == sizeof(long int))
-                    {
-                        lastAction = newAction;
-                        newAction = malloc(sizeof(input));
-                        if(newAction == NULL)
-                        {
-                            return NULL;
-                        }
-                        lastAction->next = newAction;
-                        if(fread(&newAction->link, sizeof(long int), 1, savefile) < sizeof(long int))
-                        {
-                            return NULL;
-                        }
-                        if(fread(&newAction->confidence, sizeof(float), 1, savefile) < sizeof(float))
-                        {
-                            return NULL;
-                        }
-                        if(fread(&newAction->dataSize, sizeof(size_t), 1, savefile) < sizeof(size_t))
-                        {
-                            return NULL;
-                        }
-                        newAction->data = malloc(newAction->dataSize);
-                        if(newAction->data == NULL)
-                        {
-                            return NULL;
-                        }
-                        if(fread(newAction->data, newInpu->dataSize, 1, savefile) < newAction->dataSize)
-                        {
-                            return NULL;
-                        }
-
-                        lastAction = newAction;
-                        newAction = malloc(sizeof(input));
-                        if(newAction == NULL)
-                        {
-                            return NULL;
-                        }
-                        lastAction->next = newAction;
 
                     }
                     newInput->next = NULL;
@@ -313,51 +252,6 @@ int saveDatabase(const char* basedir, memList* start)
                 nextInput = tmp;
             }
         }
-        for(int i = 0; i < NUMOUTPUTS; i++)
-        {
-            char* filename = malloc(1000);
-            if(filename == NULL)
-            {
-                return NULL;
-            }
-            sprintf(filename, "%s/%s/O%d", basedir, parser->mem->uuid, i);
-            FILE* actionDump = fopen(filename, "w") 
-            if(actionDump == NULL)
-            {
-                return -2;
-            }
-            magic actionOps;
-            actionOps.type = INPUT;
-            actionOps.index = i;
-            actionOps.magicBits = MAGIC_NUM;
-            if(fwrite(&actionOps, sizeof(magic), 1, actionDump) < sizeof(magic))
-            {
-                return -2;
-            }
-            
-            action* nextAction = parser->mem->actions[i];
-            while(nextAction != NULL)
-            {
-                if(fwrite(&nextAction->link, sizeof(long int), 1, actionDump) < sizeof(long int))
-                {
-                    return -2;
-                }
-                if(fwrite(&nextAction->confidence, sizeof(float), 1, actionDump) < sizeof(float))
-                {
-                    return -2;
-                }
-                if(fwrite(&nextAction->dataSize, sizeof(size_t), 1, actionDump) < sizeof(size_t))
-                {
-                    return -2;
-                }
-                if(fwrite(nextAction->data, nextInput->dataSize, 1, actionDump) < nextAction->dataSize)
-                {
-                    return -2;
-                }
-                action* tmp = nextAction->next;
-                nextAction = tmp;
-            }
-        }
         memList* tmp = parser->next;
         parser = tmp;
     }
@@ -382,19 +276,6 @@ void disassmeble(memList* start)
                 free(lastInput);
             }
         }
-        for(int i = 0; i < NUMACTIONS; i++)
-        {
-            action* nextAction = next->mem->actions[i];
-            action* lastAction = NULL;
-            while(nextAction != NULL)
-            {
-                free(nextAction->data);
-                lastAction = nextAction;
-                action* tmp = nextAction->next;
-                nextAction = tmp;
-                free(lastAction);
-            }
-        }
         last = next;
         memList* tmp = next->next;
         next = tmp;
@@ -403,11 +284,48 @@ void disassmeble(memList* start)
     }
 }
 
-long int SearchDatabase(input pattern, memList* database)
+long int SearchDatabase(input pattern, int type, memList* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
+    memList* next = database;
     long int steps = 0, mostSim;
     do
     {
-        
-    } while(cost * STOP_LIMIT < lastCost);
+        float matchprob = 0;
+        input* currInput = next->mem->inputs[type];
+        while(currInput != NULL)
+        {
+            float similarity = compareInputs(pattern, *currInput, type);
+            if(similarity > matchprob)
+            {
+                matchprob = similarity;
+            }
+            input* tmp = currInput->next;
+            currInput = tmp;
+        }
+        if(matchprob > simConf)
+        {
+            mostSim = next->mem->uuid;
+            simConf = matchprob;
+        }
+        lastCost = cost;
+        steps++;
+        cost = steps / matchprob;
+        if(matchprob > BRANCH_LIMIT)
+        {
+            memList loop = next;
+            while(loop->mem->uuid < currInput->link)
+            {
+                memList tmp = loop->next;
+                loop = tmp;
+            }
+            next = loop;
+        }
+        else
+        {
+            memList tmp = next->next;
+            next = tmp;
+        }
+    } while(cost * STOP_LIMIT > lastCost && next != NULL);
+    return mostSim;
+}
