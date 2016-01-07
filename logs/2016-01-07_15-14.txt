@@ -1,0 +1,4 @@
+Senior project log for 2016-01-07_15-14
+Time logged: 4
+I wrote a function to group inputs into memories, and had some thoughts about
+the action loop, I'm envisioning now as being similar to a standard game loop.

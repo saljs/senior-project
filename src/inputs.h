@@ -14,6 +14,8 @@
 #define BRANCH_LIMIT 0.85
 //The stopping threshold for the search function. Higher numbers will cause the function to search for longer
 #define STOP_LIMIT 1.5
+//The limit for chunking memories into discrete collections. Higher will split more often and lower less often.
+#define SPLIT_LIMIT 0.85
 
 //Takes two inputs as arguments and returns the percent similarity between them.
 float compareInputs(input input1, input input2, int type);

@@ -29,7 +29,7 @@ memList* newMemory(memList* start)
     return newStart;
 }
 
-void addInput(memList* current, input* toAdd, int index)
+void addInput(memory* current, input* toAdd, int index)
 {
     toAdd->next = current->inputs[index];
     current->inputs[index] = toAdd;
@@ -329,3 +329,32 @@ long int SearchDatabase(input pattern, int type, memList* database)
     } while(cost * STOP_LIMIT > lastCost && next != NULL);
     return mostSim;
 }
+
+memory* AddtoMem(memory* current, input* newInput, int index, memList* database)
+{
+    int count = 0;
+    float mean = 0.0, sum = 0.0;
+    input* next = current->inputs[index];
+    while(next != NULL)
+    {
+        sum += compareInputs(newInput, next, index);
+        count++;
+    }
+    mean = sum / count;
+    memory* updated;
+    if(mean < SPLIT_LIMIT)
+    {
+        addInput(current, newInput, index);
+        updated = current;
+    }
+    else
+    {
+       memList* newStart = newMemory(database);
+       addInput(newStart, newInput, index);
+       updated = newStart->mem;
+       database = newStart;
+    }
+    return updated;
+}
+
+
