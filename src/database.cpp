@@ -284,7 +284,7 @@ void disassmeble(memList* start)
     }
 }
 
-long int SearchDatabase(input pattern, int type, memList* database)
+void SearchDatabase(input* pattern, int type, memList* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
     memList* next = database;
@@ -295,7 +295,7 @@ long int SearchDatabase(input pattern, int type, memList* database)
         input* currInput = next->mem->inputs[type];
         while(currInput != NULL)
         {
-            float similarity = compareInputs(pattern, *currInput, type);
+            float similarity = compareInputs(pattern, currInput, type);
             if(similarity > matchprob)
             {
                 matchprob = similarity;
@@ -327,7 +327,9 @@ long int SearchDatabase(input pattern, int type, memList* database)
             next = tmp;
         }
     } while(cost * STOP_LIMIT > lastCost && next != NULL);
-    return mostSim;
+    pattern->link = mostSim;
+    pattern->confidence = simConf;
+    return;
 }
 
 memory* AddtoMem(memory* current, input* newInput, int index, memList* database, memory* newTrigger)

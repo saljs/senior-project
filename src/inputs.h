@@ -18,9 +18,9 @@
 #define SPLIT_LIMIT 0.85
 
 //Takes two inputs as arguments and returns the percent similarity between them.
-float compareInputs(input input1, input input2, int type);
+float compareInputs(input* input1, input* input2, int type);
 
 //Receives a input of type from whatever source. Can be blocking or nonblocking depending on agent setup.
-input getInput(int type);
+input getInput(int type, memList* database);
 
 #endif
