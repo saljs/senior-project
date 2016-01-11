@@ -284,7 +284,7 @@ void disassmeble(memList* start)
     }
 }
 
-void SearchDatabase(input* pattern, int type, memList* database)
+void linkInput(input* pattern, int type, memList* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
     memList* next = database;
