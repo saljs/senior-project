@@ -1,0 +1,6 @@
+Senior project log for 2016-01-11_15-25
+Time logged: 5
+I started working on the specific functions for the demo! Had a ton of issues
+getting OpenCV's Mat object to be stored in a void* but I got it eventually. I
+have getInput() like halfway written now! Also some minor changes to the
+master branch of the project. 
