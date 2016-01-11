@@ -44,5 +44,6 @@ memList* loadDatabase(const char* basedir);
 int saveDatabase(const char* basedir, memList* start);
 void disassemble(memList* start);
 long int SearchDatabase(input pattern, int type, memList* database);
-memory* AddtoMem(memory* current, input* newInput, int index, memList* database);
-#endift
+memory* AddtoMem(memory* current, input* newInput, int index, memList* database, memory* newTrigger);
+
+#endif

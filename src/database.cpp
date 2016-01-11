@@ -330,7 +330,7 @@ long int SearchDatabase(input pattern, int type, memList* database)
     return mostSim;
 }
 
-memory* AddtoMem(memory* current, input* newInput, int index, memList* database)
+memory* AddtoMem(memory* current, input* newInput, int index, memList* database, memory* newTrigger)
 {
     int count = 0;
     float mean = 0.0, sum = 0.0;
@@ -344,11 +344,13 @@ memory* AddtoMem(memory* current, input* newInput, int index, memList* database)
     memory* updated;
     if(mean < SPLIT_LIMIT)
     {
+        newTrigger = NULL;
         addInput(current, newInput, index);
         updated = current;
     }
     else
     {
+       newTrigger = current; 
        memList* newStart = newMemory(database);
        addInput(newStart, newInput, index);
        updated = newStart->mem;
