@@ -313,17 +313,17 @@ void linkInput(input* pattern, int type, memList* database)
         cost = steps / matchprob;
         if(matchprob > BRANCH_LIMIT)
         {
-            memList loop = next;
-            while(loop->mem->uuid < currInput->link)
+            memList* loop = next;
+            while(loop->mem->uuid > currInput->link)
             {
-                memList tmp = loop->next;
+                memList* tmp = loop->next;
                 loop = tmp;
             }
             next = loop;
         }
         else
         {
-            memList tmp = next->next;
+            memList* tmp = next->next;
             next = tmp;
         }
     } while(cost * STOP_LIMIT > lastCost && next != NULL);
@@ -332,31 +332,36 @@ void linkInput(input* pattern, int type, memList* database)
     return;
 }
 
-memory* AddtoMem(memory* current, input* newInput, int index, memList* database, memory* newTrigger)
+memList* AddtoMem(input* newInput, int index, memList* database, bool* newTrigger)
 {
     int count = 0;
     float mean = 0.0, sum = 0.0;
-    input* next = current->inputs[index];
+    input* next = database->mem->inputs[index];
     while(next != NULL)
     {
         sum += compareInputs(newInput, next, index);
         count++;
     }
     mean = sum / count;
-    memory* updated;
+    memList* updated;
     if(mean < SPLIT_LIMIT)
     {
-        newTrigger = NULL;
-        addInput(current, newInput, index);
-        updated = current;
+        if(newTrigger != NULL)
+        {
+            *newTrigger = true;
+        }
+        addInput(database->mem, newInput, index);
+        updated = database;
     }
     else
     {
-       newTrigger = current; 
+       if(newTrigger != NULL)
+       {
+           *newTrigger = true;
+       }
        memList* newStart = newMemory(database);
-       addInput(newStart, newInput, index);
-       updated = newStart->mem;
-       database = newStart;
+       addInput(newStart->mem, newInput, index);
+       updated = newStart;
     }
     return updated;
 }

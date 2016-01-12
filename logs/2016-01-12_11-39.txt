@@ -1,0 +1,5 @@
+Senior project log for 2016-01-12_11-39
+Time logged: 3
+Finished up inputs.cpp for the demo, nothing too hard, I had it all worked out
+yesterday, just had to put it to code. Hope: to try and compile by the end of
+the week.

@@ -15,7 +15,7 @@
 
 using namespace cv;
 
-input getInput(int type, memList* database)
+input* getInput(int type, memList* database)
 {
     if(type == 0)
     {
@@ -26,7 +26,7 @@ input getInput(int type, memList* database)
         }
         else
         {
-            input newInput;
+            input* newInput = malloc(sizeof(input));
             newInput.data = textIn;
             newInput.dataSize = strlen(textIn);
             linkInput(&newInput, type, database);
@@ -43,7 +43,7 @@ input getInput(int type, memList* database)
         }
         else
         {
-            input newInput;
+            input* newInput = malloc(sizeof(input));
             Mat image = imread(imagePath, CV_LOAD_IMAGE_COLOR);
             newInput.data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
             int ImgType = image.type();
@@ -169,6 +169,8 @@ float compareInputs(input* input1, input* input2, int type)
         
         //average the results
         similarity = (FLANNtest + HISTtest)/2;
+        free(data1);
+        free(data2);
     }
     return similarity;
 }
