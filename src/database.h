@@ -15,7 +15,7 @@
 typedef struct input;
 struct input
 {
-    char* data;
+    void* data;
     size_t dataSize;
     long int link;
     float confidence;
