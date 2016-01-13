@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=$(shell pkg-config --cflags opencv) -lm -fpermissive
+CFLAGS=$(shell pkg-config --cflags opencv) -lm -fpermissive --debug
 LDFLAGS=$(shell pkg-config --libs opencv) -lreadline -lcurses
 
 all: demo

@@ -1,0 +1,8 @@
+Senior project log for 2016-01-13_13-54
+Time logged: 9
+
+Created a makefile and compiled the code, which segfaulted immediatly. Which I
+expected to be honest. Spent a long time debugging a bunch of memory issues
+and a couple infinite loops. Right now I'm on to trying to get the save and
+restore funtions to work properly, they keep erring out with an error code of
+Success. Makes no sense. I'll fix it tomorrow maybe.

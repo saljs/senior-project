@@ -20,13 +20,18 @@ void error(const char* message)
 int main(int argc, char* argv[])
 {
     memList* database;
-    if(argc < 1)
+    if(argc < 2)
     {
         database = newMemory(NULL);
     }
     else
     {
         database = loadDatabase(argv[1]);
+    }
+    if(database == NULL)
+    {
+        error("problem with the database\n");
+        return -1;
     }
     while(true)
     {
@@ -49,7 +54,7 @@ int main(int argc, char* argv[])
             input* outLoop = loop->mem->inputs[0];
             while(outLoop != NULL)
             {
-                printf("%d\n", outLoop->data);
+                printf("%s\n", outLoop->data);
                 input* tmp = outLoop->next;
                 outLoop = tmp;
             }
@@ -90,17 +95,32 @@ int main(int argc, char* argv[])
         }
 
         char cont;
+        //getchar();
         printf("Continue? y/n : ");
-        scanf("%c", &cont);
+        scanf(" %c", &cont);
         if(cont == 'n')
         {
             break;
         }
     }
-    if(saveDatabase(argv[1], database) != 0)
+    if(argc < 2)
     {
-        error("error saving the database!\n");
-    }         
+        int save = saveDatabase("database", database); 
+        if(save != 0)
+        {
+            error("error saving the database!\n");
+            printf("Error code: %d\n", save);
+        }         
+    }
+    else
+    {
+        int save = saveDatabase(argv[1], database);
+        if(save != 0)
+        {
+            error("error saving the database!\n");
+            printf("Error code: %d\n", save);
+        }         
+    }
     disassemble(database);
     return 0;
 }

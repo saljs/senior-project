@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <math.h>
 
 memList* newMemory(memList* start)
 {
@@ -129,7 +130,7 @@ memList* loadDatabase(const char* basedir)
                     input* lastInput = NULL;
                     newMem->inputs[magicBuff.index] = newInput;
                     //loop through to rebuild linked list
-                    while(fread(&newInput->link, sizeof(long int), 1, savefile) == sizeof(long int))
+                    while(fread(&newInput->link, sizeof(long int), 1, savefile) > 0)
                     {
                         lastInput = newInput;
                         newInput = malloc(sizeof(input));
@@ -138,15 +139,15 @@ memList* loadDatabase(const char* basedir)
                             return NULL;
                         }
                         lastInput->next = newInput;
-                        if(fread(&newInput->link, sizeof(long int), 1, savefile) < sizeof(long int))
+                        if(fread(&newInput->link, sizeof(long int), 1, savefile) < 1)
                         {
                             return NULL;
                         }
-                        if(fread(&newInput->confidence, sizeof(float), 1, savefile) < sizeof(float))
+                        if(fread(&newInput->confidence, sizeof(float), 1, savefile) < 1)
                         {
                             return NULL;
                         }
-                        if(fread(&newInput->dataSize, sizeof(size_t), 1, savefile) < sizeof(size_t))
+                        if(fread(&newInput->dataSize, sizeof(size_t), 1, savefile) < 1)
                         {
                             return NULL;
                         }
@@ -155,7 +156,7 @@ memList* loadDatabase(const char* basedir)
                         {
                             return NULL;
                         }
-                        if(fread(newInput->data, newInput->dataSize, 1, savefile) < newInput->dataSize)
+                        if(fread(newInput->data, newInput->dataSize, 1, savefile) < 1)
                         {
                             return NULL;
                         }
@@ -196,6 +197,7 @@ int saveDatabase(const char* basedir, memList* start)
     {
         if(errno != EEXIST)
         {
+            perror("filesystem error");
             return -2;
         }
     }
@@ -206,11 +208,12 @@ int saveDatabase(const char* basedir, memList* start)
         {
             return -1;
         }
-        sprintf(dirname, "%s/%s", basedir, parser->mem->uuid);
+        sprintf(dirname, "%s/%d", basedir, parser->mem->uuid);
         if(!mkdir(dirname, 0700))
         {
             if(errno != EEXIST)
             {
+                perror("filesystem error");
                 return -2;
             }
         }
@@ -222,7 +225,7 @@ int saveDatabase(const char* basedir, memList* start)
             {
                 return -2;
             }
-            sprintf(filename, "%s/%s/I%d", basedir, parser->mem->uuid, i);
+            sprintf(filename, "%s/%d/I%d", basedir, parser->mem->uuid, i);
             FILE* inputDump = fopen(filename, "w");
             if(inputDump == NULL)
             {
@@ -231,7 +234,7 @@ int saveDatabase(const char* basedir, memList* start)
             magic inputOps;
             inputOps.index = i;
             inputOps.magicBits = MAGIC_NUM;
-            if(fwrite(&inputOps, sizeof(magic), 1, inputDump) < sizeof(magic))
+            if(fwrite(&inputOps, sizeof(magic), 1, inputDump) < 1)
             {
                 return -2;
             }
@@ -239,19 +242,19 @@ int saveDatabase(const char* basedir, memList* start)
             input* nextInput = parser->mem->inputs[i];
             while(nextInput != NULL)
             {
-                if(fwrite(&nextInput->link, sizeof(long int), 1, inputDump) < sizeof(long int))
+                if(fwrite(&nextInput->link, sizeof(long int), 1, inputDump) < 1)
                 {
                     return -2;
                 }
-                if(fwrite(&nextInput->confidence, sizeof(float), 1, inputDump) < sizeof(float))
+                if(fwrite(&nextInput->confidence, sizeof(float), 1, inputDump) < 1)
                 {
                     return -2;
                 }
-                if(fwrite(&nextInput->dataSize, sizeof(size_t), 1, inputDump) < sizeof(size_t))
+                if(fwrite(&nextInput->dataSize, sizeof(size_t), 1, inputDump) < 1)
                 {
                     return -2;
                 }
-                if(fwrite(nextInput->data, nextInput->dataSize, 1, inputDump) < nextInput->dataSize)
+                if(fwrite(nextInput->data, nextInput->dataSize, 1, inputDump) < 1)
                 {
                     return -2;
                 }
@@ -295,17 +298,19 @@ void linkInput(input* pattern, int type, memList* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
     memList* next = database;
-    long int steps = 0, mostSim;
+    long int steps = 0, mostSim = -1;
     do
     {
         float matchprob = 0;
         input* currInput = next->mem->inputs[type];
+        input* tmpSim;
         while(currInput != NULL)
         {
             float similarity = compareInputs(pattern, currInput, type);
             if(similarity > matchprob)
             {
                 matchprob = similarity;
+                tmpSim = currInput;
             }
             input* tmp = currInput->next;
             currInput = tmp;
@@ -321,10 +326,14 @@ void linkInput(input* pattern, int type, memList* database)
         if(matchprob > BRANCH_LIMIT)
         {
             memList* loop = next;
-            while(loop->mem->uuid > currInput->link)
+            while(loop->mem->uuid > tmpSim->link)
             {
                 memList* tmp = loop->next;
                 loop = tmp;
+                if(loop == NULL)
+                {
+                    break;
+                }
             }
             next = loop;
         }
@@ -348,10 +357,12 @@ memList* AddtoMem(input* newInput, int index, memList* database, bool* newTrigge
     {
         sum += compareInputs(newInput, next, index);
         count++;
+        input* tmp = next->next;
+        next = tmp;
     }
     mean = sum / count;
     memList* updated;
-    if(mean < SPLIT_LIMIT)
+    if(mean < SPLIT_LIMIT || isnan(mean))
     {
         if(newTrigger != NULL)
         {
