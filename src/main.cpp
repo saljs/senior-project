@@ -1,4 +1,16 @@
 #include "database.h"
+#include "inputs.h"
+#include "vars.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <iostream>
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+
+using namespace std;
+using namespace cv;
 
 void error(const char* message)
 {
@@ -62,9 +74,9 @@ int main(int argc, char* argv[])
                 memmove(&cols, outLoop->data+sizeof(int), sizeof(int));
                 memmove(&type, outLoop->data+sizeof(int)*2, sizeof(int));
                 memmove(&step, outLoop->data+sizeof(int)*3, sizeof(size_t));
-                memmove(data, outLoop->data+sizeof(int)*3+sizeof(size_t), dataSize - sizeof(int)*3+sizeof(size_t));
+                memmove(data, outLoop->data+sizeof(int)*3+sizeof(size_t), outLoop->dataSize - sizeof(int)*3+sizeof(size_t));
                 Mat img(rows, cols, type, data, step);
-                imshow(text->data, img);
+                imshow("Image", img);
                 waitKey(0);
                 input* tmp = outLoop->next;
                 outLoop = tmp;

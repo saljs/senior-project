@@ -1,18 +1,18 @@
 #include "inputs.h"
-#include "database.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
-#include <stdio.h>
 #include <iostream>
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/features2d.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
+using namespace std;
 using namespace cv;
 
 input* getInput(int type, memList* database)
@@ -26,10 +26,10 @@ input* getInput(int type, memList* database)
         }
         else
         {
-            input* newInput = malloc(sizeof(input));
-            newInput.data = textIn;
-            newInput.dataSize = strlen(textIn);
-            linkInput(&newInput, type, database);
+            input* newInput = (input*)malloc(sizeof(input));
+            newInput->data = textIn;
+            newInput->dataSize = strlen(textIn);
+            linkInput(newInput, type, database);
             return newInput;
         }
 
@@ -43,17 +43,17 @@ input* getInput(int type, memList* database)
         }
         else
         {
-            input* newInput = malloc(sizeof(input));
+            input* newInput = (input*)malloc(sizeof(input));
             Mat image = imread(imagePath, CV_LOAD_IMAGE_COLOR);
-            newInput.data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
+            newInput->data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
             int ImgType = image.type();
-            memmove(newInput.data, &image.rows, sizeof(int));
-            memmove(newInput.data+sizeof(int), &image.cols, sizeof(int));
-            memmove(newInput.data+sizeof(int)*2, &ImgType, sizeof(int));
-            memmove(newInput.data+sizeof(int)*3, image.step.p, sizeof(size_t));
-            memmove(newInput.data+sizeof(int)*3 + sizeof(size_t), image.data, image.elemSize()*image.rows*image.cols);
-            newInput.dataSize = sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols;
-            linkInput(&newInput, type, database);
+            memmove(newInput->data, &image.rows, sizeof(int));
+            memmove(newInput->data+sizeof(int), &image.cols, sizeof(int));
+            memmove(newInput->data+sizeof(int)*2, &ImgType, sizeof(int));
+            memmove(newInput->data+sizeof(int)*3, image.step.p, sizeof(size_t));
+            memmove(newInput->data+sizeof(int)*3 + sizeof(size_t), image.data, image.elemSize()*image.rows*image.cols);
+            newInput->dataSize = sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols;
+            linkInput(newInput, type, database);
             return newInput;
         }
     }
@@ -67,10 +67,10 @@ float compareInputs(input* input1, input* input2, int type)
     {
         //compare the two strings for occurances of the same word
         int count = 0, size = 0;
-        char* firstWord = strtok(input1->data, " ");
+        char* firstWord = strtok((char*)input1->data, " ");
         while(firstWord != NULL)
         {
-            char* secondWord = strtok(input2->data, " ");
+            char* secondWord = strtok((char*)input2->data, " ");
             while(secondWord != NULL)
             {
                 if(strcmp(firstWord, secondWord) == 0)
@@ -97,14 +97,14 @@ float compareInputs(input* input1, input* input2, int type)
         memmove(&cols, input1->data+sizeof(int), sizeof(int));
         memmove(&type, input1->data+sizeof(int)*2, sizeof(int));
         memmove(&step, input1->data+sizeof(int)*3, sizeof(size_t));
-        memmove(data1, input1->data+sizeof(int)*3+sizeof(size_t), dataSize - sizeof(int)*3+sizeof(size_t));
+        memmove(data1, input1->data+sizeof(int)*3+sizeof(size_t), input1->dataSize - sizeof(int)*3+sizeof(size_t));
         Mat img_1(rows, cols, type, data1, step);
 
         memmove(&rows, input2->data, sizeof(int));
         memmove(&cols, input2->data+sizeof(int), sizeof(int));
         memmove(&type, input2->data+sizeof(int)*2, sizeof(int));
         memmove(&step, input2->data+sizeof(int)*3, sizeof(size_t));
-        memmove(data2, input2->data+sizeof(int)*3+sizeof(size_t), dataSize - sizeof(int)*3+sizeof(size_t));
+        memmove(data2, input2->data+sizeof(int)*3+sizeof(size_t), input2->dataSize - sizeof(int)*3+sizeof(size_t));
         Mat img_2(rows, cols, type, data2, step);
         
         //calculate similarity using FLANN matching
@@ -158,12 +158,14 @@ float compareInputs(input* input1, input* input2, int type)
         cvtColor(img_1, hsv_1, COLOR_BGR2HSV);
         cvtColor(img_2, hsv_2, COLOR_BGR2HSV);
         int histSize[] = {50, 60};
-        const float* ranges[] = {{0, 180}, {0, 256}};
+        float h_ranges[] = { 0, 180 };
+        float s_ranges[] = { 0, 256 };
+        const float* ranges[] = { h_ranges, s_ranges };
         int channels[] = {0, 1};
         MatND hist_1, hist_2;
-        calcHist(&hsv_1, channels, Mat(), hist_1, 2, histSize, reanges, true, false);
+        calcHist(&hsv_1, 1, channels, Mat(), hist_1, 2, histSize, ranges, true, false);
         normalize(hist_1, hist_1, 0, 1, NORM_MINMAX, -1, Mat());
-        calcHist(&hsv_2, channels, Mat(), hist_2, 2, histSize, reanges, true, false);
+        calcHist(&hsv_2, 1, channels, Mat(), hist_2, 2, histSize, ranges, true, false);
         normalize(hist_2, hist_2, 0, 1, NORM_MINMAX, -1, Mat());
         double HISTtest = 1 - compareHist(hist_1, hist_2, 3);
         

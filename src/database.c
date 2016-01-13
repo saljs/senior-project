@@ -1,4 +1,12 @@
 #include "database.h"
+#include "inputs.h"
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <stdbool.h>
 
 memList* newMemory(memList* start)
 {
@@ -43,7 +51,7 @@ memList* loadDatabase(const char* basedir)
     DIR* base = opendir(basedir);
     if(base == NULL)
     {
-        return = newMemory(NULL);
+        return newMemory(NULL);
     }
     struct dirent* uuid_dir;
     while((uuid_dir = readdir(base)))
@@ -71,7 +79,7 @@ memList* loadDatabase(const char* basedir)
         {
             return NULL;
         }
-        sprtinf(filename, "%s/%s", basedir, uuid_dir->d_name);
+        sprintf(filename, "%s/%s", basedir, uuid_dir->d_name);
         DIR* memdir = opendir(filename);
         if(memdir == NULL)
         {
@@ -116,7 +124,7 @@ memList* loadDatabase(const char* basedir)
                     input* newInput = malloc(sizeof(input));
                     if(newInput == NULL)
                     {
-                        return NULL
+                        return NULL;
                     }
                     input* lastInput = NULL;
                     newMem->inputs[magicBuff.index] = newInput;
@@ -147,7 +155,7 @@ memList* loadDatabase(const char* basedir)
                         {
                             return NULL;
                         }
-                        if(fread(newInput->data, newInpu->dataSize, 1, savefile) < newInput->dataSize)
+                        if(fread(newInput->data, newInput->dataSize, 1, savefile) < newInput->dataSize)
                         {
                             return NULL;
                         }
@@ -167,7 +175,7 @@ memList* loadDatabase(const char* basedir)
             fclose(savefile);
         }
         closedir(memdir);
-        next = malloc(sizeof(memlist));
+        next = malloc(sizeof(memList));
         if(next == NULL)
         {
             return NULL;
@@ -212,16 +220,15 @@ int saveDatabase(const char* basedir, memList* start)
             char* filename = malloc(1000);
             if(filename == NULL)
             {
-                return NULL;
+                return -2;
             }
             sprintf(filename, "%s/%s/I%d", basedir, parser->mem->uuid, i);
-            FILE* inputDump = fopen(filename, "w") 
+            FILE* inputDump = fopen(filename, "w");
             if(inputDump == NULL)
             {
                 return -2;
             }
             magic inputOps;
-            inputOps.type = INPUT;
             inputOps.index = i;
             inputOps.magicBits = MAGIC_NUM;
             if(fwrite(&inputOps, sizeof(magic), 1, inputDump) < sizeof(magic))
@@ -257,7 +264,7 @@ int saveDatabase(const char* basedir, memList* start)
     }
 }
 
-void disassmeble(memList* start)
+void disassemble(memList* start)
 {
     memList* next = start;
     memList* last = NULL;
