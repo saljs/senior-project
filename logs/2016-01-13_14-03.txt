@@ -1,0 +1,8 @@
+Senior project log for 2016-01-13_14-03
+Time logged: 0
+
+Forgot, some more resources to add to the list:
+
+http://mrbook.org/blog/tutorials/make/
+http://www.bioinf.org.uk/software/profit/doc/node17.html
+https://help.github.com/articles/ignoring-files/

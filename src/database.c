@@ -57,11 +57,11 @@ memList* loadDatabase(const char* basedir)
     struct dirent* uuid_dir;
     while((uuid_dir = readdir(base)))
     {
-        if(strcmp(uuid_dir->d_name, "."))
+        if(strcmp(uuid_dir->d_name, ".") == 0)
         {
             continue;
         }
-        if(strcmp(uuid_dir->d_name, ".."))
+        if(strcmp(uuid_dir->d_name, "..") == 0)
         {
             continue;
         }
@@ -91,11 +91,11 @@ memList* loadDatabase(const char* basedir)
         //loop through save files for inputs
         while((memfiles = readdir(memdir)))
         {
-            if(strcmp(memfiles->d_name, "."))
+            if(strcmp(memfiles->d_name, ".") == 0)
             {
                 continue;
             }
-            if(strcmp(memfiles->d_name, ".."))
+            if(strcmp(memfiles->d_name, "..") == 0)
             {
                 continue;
             }
@@ -132,16 +132,9 @@ memList* loadDatabase(const char* basedir)
                     //loop through to rebuild linked list
                     while(fread(&newInput->link, sizeof(long int), 1, savefile) > 0)
                     {
-                        lastInput = newInput;
-                        newInput = malloc(sizeof(input));
-                        if(newInput == NULL)
+                        if(lastInput != NULL)
                         {
-                            return NULL;
-                        }
-                        lastInput->next = newInput;
-                        if(fread(&newInput->link, sizeof(long int), 1, savefile) < 1)
-                        {
-                            return NULL;
+                            lastInput->next = newInput;
                         }
                         if(fread(&newInput->confidence, sizeof(float), 1, savefile) < 1)
                         {
@@ -167,7 +160,7 @@ memList* loadDatabase(const char* basedir)
                         {
                             return NULL;
                         }
-                        lastInput->next = newInput;
+                        lastInput->next = NULL;
 
                     }
                     newInput->next = NULL;
@@ -192,15 +185,7 @@ memList* loadDatabase(const char* basedir)
 int saveDatabase(const char* basedir, memList* start)
 {
     memList* parser = start;
-
-    if(!mkdir(basedir, 0700))
-    {
-        if(errno != EEXIST)
-        {
-            perror("filesystem error");
-            return -2;
-        }
-    }
+    mkdir(basedir, 0700);
     while(parser != NULL)
     {
         char* dirname = malloc(1000);
@@ -209,14 +194,7 @@ int saveDatabase(const char* basedir, memList* start)
             return -1;
         }
         sprintf(dirname, "%s/%d", basedir, parser->mem->uuid);
-        if(!mkdir(dirname, 0700))
-        {
-            if(errno != EEXIST)
-            {
-                perror("filesystem error");
-                return -2;
-            }
-        }
+        mkdir(dirname, 0700);
         free(dirname);
         for(int i = 0; i < NUMINPUTS; i++)
         {

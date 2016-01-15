@@ -1,0 +1,5 @@
+Senior project log for 2016-01-15_12-53
+Time logged: 3h
+Got the database save and restore functions working properly I think, was a lot more work than
+I had thought it would be. But now I'm pretty sure they all work, like I
+think.
