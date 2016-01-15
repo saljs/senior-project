@@ -67,22 +67,30 @@ float compareInputs(input* input1, input* input2, int type)
     {
         //compare the two strings for occurances of the same word
         int count = 0, size = 0;
-        char* firstWord = strtok((char*)input1->data, " ");
+        char* string1 = (char*)malloc(input1->dataSize);
+        char* string2 = (char*)malloc(input2->dataSize);
+        memmove(string1, input1->data, input1->dataSize);
+        memmove(string2, input2->data, input2->dataSize);
+        char* saveptr1;
+        char* saveptr2;
+        char* firstWord = strtok_r(string1, " ", &saveptr1);
         while(firstWord != NULL)
         {
-            char* secondWord = strtok((char*)input2->data, " ");
+            char* secondWord = strtok_r(string2, " ", &saveptr2);
             while(secondWord != NULL)
             {
                 if(strcmp(firstWord, secondWord) == 0)
                 {
                     count++;
                 }
-                secondWord = strtok(NULL, " ");
+                secondWord = strtok_r(NULL, " ", &saveptr2);
             }
-            firstWord = strtok(NULL, " ");
+            firstWord = strtok_r(NULL, " ", &saveptr1);
             size++;
         }
         similarity = count / size;
+        free(string1);
+        free(string2);
     }
     else if(type == 1)
     {

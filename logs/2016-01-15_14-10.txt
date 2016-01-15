@@ -1,0 +1,8 @@
+Senior project log for 2016-01-15_14-10
+Time logged: 2
+Worked on the getInputs function, string comparison was borked because strtok
+can't run concurrently, so I replaced ti with strtok_r and then fixed the
+stupidest C++ error I have ever have the privilage to see. Turns out you can't
+use the & operator to refer to the location of the second variable declared in the same
+statement, you have to declare each one seperatly, which is so mind-numbingly
+stupid becasue it shouldn't mater one iota to the assembler.
