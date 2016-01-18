@@ -15,7 +15,7 @@
 using namespace std;
 using namespace cv;
 
-input* getInput(int type, memList* database)
+input* getInput(int type, memory* database)
 {
     if(type == 0)
     {

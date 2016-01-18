@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-memList* newMemory(memList* start)
+memory* newMemory(memory* start)
 {
     memory* newMem = malloc(sizeof(memory));
     if(newMem == NULL)
@@ -18,7 +18,7 @@ memList* newMemory(memList* start)
     }
     if(start != NULL)
     {
-        newMem->uuid = start->mem->uuid + 1;
+        newMem->uuid = start->uuid + 1;
     }
     else
     {
@@ -28,14 +28,8 @@ memList* newMemory(memList* start)
     {
         newMem->inputs[i] = NULL;
     }
-    memList* newStart = malloc(sizeof(memList));
-    if(newStart == NULL)
-    {
-        return NULL;
-    }
-    newStart->mem = newMem;
-    newStart->next = start;
-    return newStart;
+    newMem->next = start;
+    return newMem;
 }
 
 void addInput(memory* current, input* toAdd, int index)
@@ -44,10 +38,10 @@ void addInput(memory* current, input* toAdd, int index)
     current->inputs[index] = toAdd;
 }
 
-memList* loadDatabase(const char* basedir)
+memory* loadDatabase(const char* basedir)
 {
-    memList* last = NULL;
-    memList* next;
+    memory* last = NULL;
+    memory* next;
 
     DIR* base = opendir(basedir);
     if(base == NULL)
@@ -169,12 +163,11 @@ memList* loadDatabase(const char* basedir)
             fclose(savefile);
         }
         closedir(memdir);
-        next = malloc(sizeof(memList));
+        next = malloc(sizeof(memory));
         if(next == NULL)
         {
             return NULL;
         }
-        next->mem = newMem;
         next->next = last;
         last = next;
     }
@@ -182,9 +175,9 @@ memList* loadDatabase(const char* basedir)
     return next;
 }
 
-int saveDatabase(const char* basedir, memList* start)
+int saveDatabase(const char* basedir, memory* start)
 {
-    memList* parser = start;
+    memory* parser = start;
     mkdir(basedir, 0700);
     while(parser != NULL)
     {
@@ -193,7 +186,7 @@ int saveDatabase(const char* basedir, memList* start)
         {
             return -1;
         }
-        sprintf(dirname, "%s/%d", basedir, parser->mem->uuid);
+        sprintf(dirname, "%s/%d", basedir, parser->uuid);
         mkdir(dirname, 0700);
         free(dirname);
         for(int i = 0; i < NUMINPUTS; i++)
@@ -203,7 +196,7 @@ int saveDatabase(const char* basedir, memList* start)
             {
                 return -2;
             }
-            sprintf(filename, "%s/%d/I%d", basedir, parser->mem->uuid, i);
+            sprintf(filename, "%s/%d/I%d", basedir, parser->uuid, i);
             FILE* inputDump = fopen(filename, "w");
             if(inputDump == NULL)
             {
@@ -217,7 +210,7 @@ int saveDatabase(const char* basedir, memList* start)
                 return -2;
             }
             
-            input* nextInput = parser->mem->inputs[i];
+            input* nextInput = parser->inputs[i];
             while(nextInput != NULL)
             {
                 if(fwrite(&nextInput->link, sizeof(long int), 1, inputDump) < 1)
@@ -240,20 +233,20 @@ int saveDatabase(const char* basedir, memList* start)
                 nextInput = tmp;
             }
         }
-        memList* tmp = parser->next;
+        memory* tmp = parser->next;
         parser = tmp;
     }
 }
 
-void disassemble(memList* start)
+void disassemble(memory* start)
 {
-    memList* next = start;
-    memList* last = NULL;
+    memory* next = start;
+    memory* last = NULL;
     while(next != NULL)
     {
         for(int i = 0; i < NUMINPUTS; i++)
         {
-            input* nextInput = next->mem->inputs[i];
+            input* nextInput = next->inputs[i];
             input* lastInput = NULL;
             while(nextInput != NULL)
             {
@@ -265,22 +258,21 @@ void disassemble(memList* start)
             }
         }
         last = next;
-        memList* tmp = next->next;
+        memory* tmp = next->next;
         next = tmp;
-        free(last->mem);
         free(last);
     }
 }
 
-void linkInput(input* pattern, int type, memList* database)
+void linkInput(input* pattern, int type, memory* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
-    memList* next = database;
+    memory* next = database;
     long int steps = 0, mostSim = -1;
     do
     {
         float matchprob = 0;
-        input* currInput = next->mem->inputs[type];
+        input* currInput = next->inputs[type];
         input* tmpSim;
         while(currInput != NULL)
         {
@@ -295,7 +287,7 @@ void linkInput(input* pattern, int type, memList* database)
         }
         if(matchprob > simConf)
         {
-            mostSim = next->mem->uuid;
+            mostSim = next->uuid;
             simConf = matchprob;
         }
         lastCost = cost;
@@ -303,10 +295,10 @@ void linkInput(input* pattern, int type, memList* database)
         cost = steps / matchprob;
         if(matchprob > BRANCH_LIMIT)
         {
-            memList* loop = next;
-            while(loop->mem->uuid > tmpSim->link)
+            memory* loop = next;
+            while(loop->uuid > tmpSim->link)
             {
-                memList* tmp = loop->next;
+                memory* tmp = loop->next;
                 loop = tmp;
                 if(loop == NULL)
                 {
@@ -317,7 +309,7 @@ void linkInput(input* pattern, int type, memList* database)
         }
         else
         {
-            memList* tmp = next->next;
+            memory* tmp = next->next;
             next = tmp;
         }
     } while(cost * STOP_LIMIT > lastCost && next != NULL);
@@ -326,11 +318,11 @@ void linkInput(input* pattern, int type, memList* database)
     return;
 }
 
-memList* AddtoMem(input* newInput, int index, memList* database, bool* newTrigger)
+memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
 {
     int count = 0;
     float mean = 0.0, sum = 0.0;
-    input* next = database->mem->inputs[index];
+    input* next = database->inputs[index];
     while(next != NULL)
     {
         sum += compareInputs(newInput, next, index);
@@ -339,14 +331,14 @@ memList* AddtoMem(input* newInput, int index, memList* database, bool* newTrigge
         next = tmp;
     }
     mean = sum / count;
-    memList* updated;
-    if(mean < SPLIT_LIMIT || isnan(mean))
+    memory* updated;
+    if(mean > SPLIT_LIMIT || isnan(mean))
     {
         if(newTrigger != NULL)
         {
             *newTrigger = true;
         }
-        addInput(database->mem, newInput, index);
+        addInput(database, newInput, index);
         updated = database;
     }
     else
@@ -355,11 +347,15 @@ memList* AddtoMem(input* newInput, int index, memList* database, bool* newTrigge
        {
            *newTrigger = true;
        }
-       memList* newStart = newMemory(database);
-       addInput(newStart->mem, newInput, index);
+       memory* newStart = newMemory(database);
+       addInput(newStart, newInput, index);
        updated = newStart;
     }
     return updated;
 }
 
-
+memory* compile(input* pattern, int levels)
+{
+    memory* dataList = malloc(sizeof(memory));
+    dataList->uuid = 0;
+    

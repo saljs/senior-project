@@ -1,0 +1,4 @@
+Senior project log for 2016-01-18_15-27
+Time logged: 2
+Decieded to remove the whole memList thing and just merge it with the memory
+structure, makes a lot more sense.

@@ -20,29 +20,25 @@ typedef struct input
     float confidence;
     input* next;
 };
+typedef struct memory memory;
 typedef struct memory
 {
     long int uuid;
     input* inputs[NUMINPUTS];
+    memory* next;
 } memory;
-typedef struct memList memList;
-typedef struct memList
-{
-    memory* mem;
-    memList* next;
-};
 typedef struct magic
 {
     unsigned int magicBits;
     int index;
 } magic;
 
-memList* newMemory(memList* start);
+memory* newMemory(memory* start);
 void addInput(memory* current, input* toAdd, int index);
-memList* loadDatabase(const char* basedir);
-int saveDatabase(const char* basedir, memList* start);
-void disassemble(memList* start);
-memList* AddtoMem(input* newInput, int index, memList* database, bool* newTrigger);
-void linkInput(input* pattern, int type, memList* database);
+memory* loadDatabase(const char* basedir);
+int saveDatabase(const char* basedir, memory* start);
+void disassemble(memory* start);
+memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger);
+void linkInput(input* pattern, int type, memory* database);
 
 #endif

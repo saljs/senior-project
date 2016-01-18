@@ -19,7 +19,7 @@ void error(const char* message)
 
 int main(int argc, char* argv[])
 {
-    memList* database;
+    memory* database;
     if(argc < 2)
     {
         database = newMemory(NULL);
@@ -44,14 +44,14 @@ int main(int argc, char* argv[])
         else if(text == NULL && image != NULL)
         {
             //outputting text based on image
-            memList* loop = database;
+            memory* loop = database;
             database = AddtoMem(image, 1, database, NULL);
-            while(loop->mem->uuid > image->link)
+            while(loop->uuid > image->link)
             {
-                memList* tmp = loop->next;
+                memory* tmp = loop->next;
                 loop = tmp;
             }
-            input* outLoop = loop->mem->inputs[0];
+            input* outLoop = loop->inputs[0];
             while(outLoop != NULL)
             {
                 printf("%s\n", outLoop->data);
@@ -62,14 +62,14 @@ int main(int argc, char* argv[])
         else if(text != NULL && image == NULL)
         {
             //outputting image based on text
-            memList* loop = database;
+            memory* loop = database;
             database = AddtoMem(text, 0, database, NULL);
-            while(loop->mem->uuid > text->link)
+            while(loop->uuid > text->link)
             {
-                memList* tmp = loop->next;
+                memory* tmp = loop->next;
                 loop = tmp;
             }
-            input* outLoop = loop->mem->inputs[1];
+            input* outLoop = loop->inputs[1];
             while(outLoop != NULL)
             {
                 int rows, cols, type;
