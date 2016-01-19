@@ -1,0 +1,5 @@
+Senior project log for 2016-01-19_14-39
+Time logged: 3
+Figured out what my program was missing at work the other day, it still didn't
+have a function that would return memory composites based on an input. Well
+it does now, uses tail recursion and everything, really cool.

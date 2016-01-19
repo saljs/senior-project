@@ -44,32 +44,23 @@ int main(int argc, char* argv[])
         else if(text == NULL && image != NULL)
         {
             //outputting text based on image
-            memory* loop = database;
+            memory* composite = compile(image, database, NULL, 1);
             database = AddtoMem(image, 1, database, NULL);
-            while(loop->uuid > image->link)
-            {
-                memory* tmp = loop->next;
-                loop = tmp;
-            }
-            input* outLoop = loop->inputs[0];
+            input* outLoop = composite->inputs[0];
             while(outLoop != NULL)
             {
                 printf("%s\n", outLoop->data);
                 input* tmp = outLoop->next;
                 outLoop = tmp;
             }
+            disassemble(composite);
         }
         else if(text != NULL && image == NULL)
         {
             //outputting image based on text
-            memory* loop = database;
+            memory* composite = compile(text, database, NULL, 1);
             database = AddtoMem(text, 0, database, NULL);
-            while(loop->uuid > text->link)
-            {
-                memory* tmp = loop->next;
-                loop = tmp;
-            }
-            input* outLoop = loop->inputs[1];
+            input* outLoop = composite->inputs[1];
             while(outLoop != NULL)
             {
                 int rows, cols, type;
@@ -86,6 +77,7 @@ int main(int argc, char* argv[])
                 input* tmp = outLoop->next;
                 outLoop = tmp;
             }
+            disassemble(composite);
         }
         else if(text != NULL && image != NULL)
         {

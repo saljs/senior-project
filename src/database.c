@@ -354,8 +354,44 @@ memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
     return updated;
 }
 
-memory* compile(input* pattern, int levels)
+memory* compile(input* pattern, memory* dataset, memory* list, int levels)
 {
-    memory* dataList = malloc(sizeof(memory));
-    dataList->uuid = 0;
+    if(levels == 0)
+    {
+        return NULL;
+    }
+    memory* dataList = newMemory(list);
     
+    memory* loop = dataset;
+    while(loop->uuid > pattern->link)
+    {
+        memory* tmp = loop->next;
+        loop = tmp;
+    }
+    for(int i = 0; i < NUMINPUTS; i++)
+    {
+        input* parser = loop->inputs[i];
+        while(parser != NULL)
+        {
+            input* newInput = malloc(sizeof(input));
+            void* newData = malloc(parser->dataSize);
+            memmove(newData, parser->data, parser->dataSize);
+            memmove(newInput, parser, sizeof(input));
+            newInput->data = newData;
+            addInput(dataList, newInput, i);
+            input* tmp = parser->next;
+            parser = tmp;
+        }
+    }
+    for(int i = 0; i < NUMINPUTS; i++)
+    {
+        input* parser = loop->inputs[i];
+        while(parser != NULL)
+        {
+            compile(parser, loop, dataList, levels-1);
+            input* tmp = parser->next;
+            parser = tmp;
+        }
+    }
+    return dataList;
+}
