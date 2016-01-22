@@ -28,7 +28,7 @@ input* getInput(int type, memory* database)
         {
             input* newInput = (input*)malloc(sizeof(input));
             newInput->data = textIn;
-            newInput->dataSize = strlen(textIn);
+            newInput->dataSize = strlen(textIn)+1;
             linkInput(newInput, type, database);
             return newInput;
         }
@@ -66,7 +66,7 @@ float compareInputs(input* input1, input* input2, int type)
     if(type == 0)
     {
         //compare the two strings for occurances of the same word
-        int count = 0, size = 0;
+        float count = 0, size = 0;
         char* string1 = (char*)malloc(input1->dataSize);
         char* string2 = (char*)malloc(input2->dataSize);
         memmove(string1, input1->data, input1->dataSize);
@@ -86,6 +86,7 @@ float compareInputs(input* input1, input* input2, int type)
                 secondWord = strtok_r(NULL, " ", &saveptr2);
             }
             firstWord = strtok_r(NULL, " ", &saveptr1);
+            memmove(string2, input2->data, input2->dataSize);
             size++;
         }
         similarity = count / size;

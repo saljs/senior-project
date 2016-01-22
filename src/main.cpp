@@ -16,7 +16,30 @@ void error(const char* message)
 {
     fputs(message, stderr);
 }
-
+void visualizer(memory* database)
+{
+    memory* loop = database;
+    while(loop != NULL)
+    {
+        printf("|-mem:%d---------|\n|inputs:        |\n", loop->uuid);
+        for(int i = 0; i < NUMINPUTS; i++)
+        {
+            printf("|  input%d ", i);
+            input* inLoop = loop->inputs[i];
+            while(inLoop != NULL)
+            {
+                printf("[link:%d confidence:%f], ", inLoop->link, inLoop->confidence);
+                input* inTmp = inLoop->next;
+                inLoop = inTmp;
+            }
+            printf("\n");
+        }
+        printf("|---------------|\n   |\n   |\n   |\n");
+        memory* tmp = loop->next;
+        loop = tmp;
+    }
+    printf(" |----|\n |NULL|\n |----|\n");
+}
 int main(int argc, char* argv[])
 {
     memory* database;

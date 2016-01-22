@@ -7,10 +7,6 @@
 #ifndef DATABASE_H_
 #define DATABASE_H_
 
-#define MAGIC_NUM 0xDEADF113
-#define INPUT 0
-#define OUTPUT 1
-
 typedef struct input input;
 typedef struct input
 {
@@ -29,8 +25,11 @@ typedef struct memory
 } memory;
 typedef struct magic
 {
-    unsigned int magicBits;
+    long int uuid;
     int index;
+    size_t dataSize;
+    long int link;
+    float confidence;
 } magic;
 
 memory* newMemory(memory* start);

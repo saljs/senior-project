@@ -1,0 +1,11 @@
+Senior project log for 2016-01-22_15-04
+Time logged: 12h
+Ok, so lots on lots of bugfixing went on, just small piddly stuff that would
+break something or another here or there. First the database save/restore funtions were
+reading files in a random order, so I replaced the whole thing with a flat
+file concept. Then that was reading it in backwards, so I fexed that. Then it
+turned out strtok rewrited the string passed to it, so I had to re-memmove the
+original data before calling it a second time in my compare funtion. Then I
+fixed an off by one error in the getInputs function. I also wrote an ascii box
+visualtion graphic for the database, just to easily see what it's doing
+instead of having to dump and sort through variables. 

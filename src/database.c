@@ -38,206 +38,6 @@ void addInput(memory* current, input* toAdd, int index)
     current->inputs[index] = toAdd;
 }
 
-memory* loadDatabase(const char* basedir)
-{
-    memory* last = NULL;
-    memory* next;
-
-    DIR* base = opendir(basedir);
-    if(base == NULL)
-    {
-        return newMemory(NULL);
-    }
-    struct dirent* uuid_dir;
-    while((uuid_dir = readdir(base)))
-    {
-        if(strcmp(uuid_dir->d_name, ".") == 0)
-        {
-            continue;
-        }
-        if(strcmp(uuid_dir->d_name, "..") == 0)
-        {
-            continue;
-        }
-        if(uuid_dir->d_type != DT_DIR)
-        {
-            continue;
-        }
-        memory* newMem = malloc(sizeof(memory));
-        if(newMem == NULL)
-        {
-            return NULL;
-        }
-        newMem->uuid = atol(uuid_dir->d_name);
-        char* filename = malloc(1000);
-        if(filename == NULL)
-        {
-            return NULL;
-        }
-        sprintf(filename, "%s/%s", basedir, uuid_dir->d_name);
-        DIR* memdir = opendir(filename);
-        if(memdir == NULL)
-        {
-            return NULL;
-        }
-        free(filename);
-        struct dirent* memfiles;
-        //loop through save files for inputs
-        while((memfiles = readdir(memdir)))
-        {
-            if(strcmp(memfiles->d_name, ".") == 0)
-            {
-                continue;
-            }
-            if(strcmp(memfiles->d_name, "..") == 0)
-            {
-                continue;
-            }
-            FILE* savefile;
-            char* savename = malloc(1000);
-            if(savename == NULL)
-            {
-                return NULL;
-            }
-            sprintf(savename, "%s/%s/%s", basedir, uuid_dir->d_name, memfiles->d_name);
-            savefile = fopen(savename, "r");
-            if(savefile == NULL)
-            {
-                continue;
-            }
-            free(savename);
-            //parse save file
-            magic magicBuff;
-            if(fread(&magicBuff, sizeof(magic), 1, savefile) > 0)
-            {
-                if(magicBuff.magicBits != MAGIC_NUM)
-                {
-                    continue;
-                }
-                else 
-                {
-                    input* newInput = malloc(sizeof(input));
-                    if(newInput == NULL)
-                    {
-                        return NULL;
-                    }
-                    input* lastInput = NULL;
-                    newMem->inputs[magicBuff.index] = newInput;
-                    //loop through to rebuild linked list
-                    while(fread(&newInput->link, sizeof(long int), 1, savefile) > 0)
-                    {
-                        if(lastInput != NULL)
-                        {
-                            lastInput->next = newInput;
-                        }
-                        if(fread(&newInput->confidence, sizeof(float), 1, savefile) < 1)
-                        {
-                            return NULL;
-                        }
-                        if(fread(&newInput->dataSize, sizeof(size_t), 1, savefile) < 1)
-                        {
-                            return NULL;
-                        }
-                        newInput->data = malloc(newInput->dataSize);
-                        if(newInput->data == NULL)
-                        {
-                            return NULL;
-                        }
-                        if(fread(newInput->data, newInput->dataSize, 1, savefile) < 1)
-                        {
-                            return NULL;
-                        }
-
-                        lastInput = newInput;
-                        newInput = malloc(sizeof(input));
-                        if(newInput == NULL)
-                        {
-                            return NULL;
-                        }
-                        lastInput->next = NULL;
-
-                    }
-                    newInput->next = NULL;
-                }
-            }
-            fclose(savefile);
-        }
-        closedir(memdir);
-        next = malloc(sizeof(memory));
-        if(next == NULL)
-        {
-            return NULL;
-        }
-        next->next = last;
-        last = next;
-    }
-    closedir(base);
-    return next;
-}
-
-int saveDatabase(const char* basedir, memory* start)
-{
-    memory* parser = start;
-    mkdir(basedir, 0700);
-    while(parser != NULL)
-    {
-        char* dirname = malloc(1000);
-        if(dirname == NULL)
-        {
-            return -1;
-        }
-        sprintf(dirname, "%s/%d", basedir, parser->uuid);
-        mkdir(dirname, 0700);
-        free(dirname);
-        for(int i = 0; i < NUMINPUTS; i++)
-        {
-            char* filename = malloc(1000);
-            if(filename == NULL)
-            {
-                return -2;
-            }
-            sprintf(filename, "%s/%d/I%d", basedir, parser->uuid, i);
-            FILE* inputDump = fopen(filename, "w");
-            if(inputDump == NULL)
-            {
-                return -2;
-            }
-            magic inputOps;
-            inputOps.index = i;
-            inputOps.magicBits = MAGIC_NUM;
-            if(fwrite(&inputOps, sizeof(magic), 1, inputDump) < 1)
-            {
-                return -2;
-            }
-            
-            input* nextInput = parser->inputs[i];
-            while(nextInput != NULL)
-            {
-                if(fwrite(&nextInput->link, sizeof(long int), 1, inputDump) < 1)
-                {
-                    return -2;
-                }
-                if(fwrite(&nextInput->confidence, sizeof(float), 1, inputDump) < 1)
-                {
-                    return -2;
-                }
-                if(fwrite(&nextInput->dataSize, sizeof(size_t), 1, inputDump) < 1)
-                {
-                    return -2;
-                }
-                if(fwrite(nextInput->data, nextInput->dataSize, 1, inputDump) < 1)
-                {
-                    return -2;
-                }
-                input* tmp = nextInput->next;
-                nextInput = tmp;
-            }
-        }
-        memory* tmp = parser->next;
-        parser = tmp;
-    }
-}
-
 void disassemble(memory* start)
 {
     memory* next = start;
@@ -367,6 +167,10 @@ memory* compile(input* pattern, memory* dataset, memory* list, int levels)
     {
         memory* tmp = loop->next;
         loop = tmp;
+        if(loop == NULL)
+        {
+            return NULL;
+        }
     }
     for(int i = 0; i < NUMINPUTS; i++)
     {
@@ -394,4 +198,132 @@ memory* compile(input* pattern, memory* dataset, memory* list, int levels)
         }
     }
     return dataList;
+}
+
+memory* loadDatabase(const char* savefile)
+{
+    //open save file
+    FILE* saved = fopen(savefile, "r");
+    if(saved == NULL)
+    {
+        return NULL;
+    }
+    //recurse over the save file, load magic data, create memories as needed, add inputs
+    magic magicBuff;
+    memory* next = newMemory(NULL);
+    if(next == NULL)
+    {
+        return NULL;
+    }
+    memory* first = next;
+    memory* last;
+    //read first input
+    if(fread(&magicBuff, sizeof(magic), 1, saved) < 1)
+    {
+        return NULL;
+    }
+    next->uuid = magicBuff.uuid;
+    input* newInput = malloc(sizeof(input));
+    if(newInput == NULL)
+    {
+        return NULL;
+    }
+    newInput->dataSize = magicBuff.dataSize;
+    newInput->link = magicBuff.link;
+    newInput->confidence = magicBuff.confidence;
+    newInput->data = malloc(magicBuff.dataSize);
+    if(fread(newInput->data, magicBuff.dataSize, 1, saved) < 1)
+    {
+        return NULL;
+    }
+    //append to memory
+    next->inputs[magicBuff.index] = newInput;
+    newInput->next = NULL;
+    //read the rest
+    while(fread(&magicBuff, sizeof(magic), 1, saved) > 0)
+    {
+        if(magicBuff.uuid != next->uuid)
+        {
+            last = next;
+            next = newMemory(NULL);
+            if(next == NULL)
+            {
+                return NULL;
+            }
+            next->uuid = magicBuff.uuid;
+            next->next = NULL;
+            last->next = next;
+        }
+        newInput = malloc(sizeof(input));
+        if(newInput == NULL)
+        {
+            return NULL;
+        }
+        newInput->dataSize = magicBuff.dataSize;
+        newInput->link = magicBuff.link;
+        newInput->confidence = magicBuff.confidence;
+        newInput->data = malloc(magicBuff.dataSize);
+        if(fread(newInput->data, magicBuff.dataSize, 1, saved) < 1)
+        {
+            return NULL;
+        }
+        input* loop = next->inputs[magicBuff.index];
+        if(loop == NULL)
+        {
+            next->inputs[magicBuff.index] = newInput;
+        }
+        else
+        {
+            while(loop->next != NULL)
+            {
+                input* tmp = loop->next;
+                loop = tmp;
+            }
+            loop->next = newInput;
+        }
+        newInput->next = NULL;
+    }
+    fclose(saved);
+    return first;
+}
+
+int saveDatabase(const char* savefile, memory* start)
+{
+    //open save file
+    FILE* saveto = fopen(savefile, "w");
+    if(saveto == NULL)
+    {
+        return -2;
+    }
+    magic magicBuff;
+    memory* next = start;
+    while(next != NULL)
+    {
+        for(int i = 0; i < NUMINPUTS; i++)
+        {
+            input* nextInput = next->inputs[i];
+            while(nextInput != NULL)
+            {
+                magicBuff.uuid = next->uuid;
+                magicBuff.index = i;
+                magicBuff.dataSize = nextInput->dataSize;
+                magicBuff.link = nextInput->link;
+                magicBuff.confidence = nextInput->confidence;
+                if(fwrite(&magicBuff, sizeof(magic), 1, saveto) < 1)
+                {
+                    return -1;
+                }
+                if(fwrite(nextInput->data, nextInput->dataSize, 1, saveto) < 1)
+                {
+                    return -1;
+                }
+                input* tmp = nextInput->next;
+                nextInput = tmp;
+            }
+        }
+        memory* tmp = next->next;
+        next = tmp;
+    }
+    fclose(saveto);
+    return 0;
 }
