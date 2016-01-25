@@ -40,9 +40,17 @@ void visualizer(memory* database)
     }
     printf(" |----|\n |NULL|\n |----|\n");
 }
+
 int main(int argc, char* argv[])
 {
     memory* database;
+    if(argc == 3)
+    {
+        database = loadDatabase(argv[1]);
+        visualizer(database);
+        disassemble(database);
+        return 0;
+    }
     if(argc < 2)
     {
         database = newMemory(NULL);
@@ -59,15 +67,19 @@ int main(int argc, char* argv[])
     while(true)
     {
         input* text = getInput(0, database);
+        printf("\n");
         input* image = getInput(1, database);
+        printf("\n");
         if(text == NULL && image == NULL)
         {
-            error("No inputs given!\n");
+            //exit the program
+            break;
         }
         else if(text == NULL && image != NULL)
         {
             //outputting text based on image
-            memory* composite = compile(image, database, NULL, 1);
+            memory* composite = NULL;
+            compileMem(image, database, &composite, 1);
             database = AddtoMem(image, 1, database, NULL);
             input* outLoop = composite->inputs[0];
             while(outLoop != NULL)
@@ -81,7 +93,8 @@ int main(int argc, char* argv[])
         else if(text != NULL && image == NULL)
         {
             //outputting image based on text
-            memory* composite = compile(text, database, NULL, 1);
+            memory* composite = NULL;
+            compileMem(text, database, &composite, 1);
             database = AddtoMem(text, 0, database, NULL);
             input* outLoop = composite->inputs[1];
             while(outLoop != NULL)
@@ -95,6 +108,7 @@ int main(int argc, char* argv[])
                 memmove(&step, outLoop->data+sizeof(int)*3, sizeof(size_t));
                 memmove(data, outLoop->data+sizeof(int)*3+sizeof(size_t), outLoop->dataSize - sizeof(int)*3+sizeof(size_t));
                 Mat img(rows, cols, type, data, step);
+                namedWindow( "Image", WINDOW_AUTOSIZE );
                 imshow("Image", img);
                 waitKey(0);
                 input* tmp = outLoop->next;
@@ -107,15 +121,6 @@ int main(int argc, char* argv[])
             //save both inputs and move on
             database = AddtoMem(text, 0, database, NULL);
             database = AddtoMem(image, 1, database, NULL);
-        }
-
-        char cont;
-        //getchar();
-        printf("Continue? y/n : ");
-        scanf(" %c", &cont);
-        if(cont == 'n')
-        {
-            break;
         }
     }
     if(argc < 2)

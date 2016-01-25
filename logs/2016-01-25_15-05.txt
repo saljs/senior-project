@@ -1,0 +1,9 @@
+Senior project log for 2016-01-25_15-05
+Time logged: 8
+The demo program is ready to present. Documentation is still pretty
+nonexistant, but it works amazingly, doesn't crash, and is suprisingly fast. I
+added a total of 20 different sample inputs and added them multiple times to
+the database in a random order, creating a database of 140 elements. I also
+fixed the compileMem function, it was a bit of a mess, but I got it working
+great now. No memory leaks in it either, so that's cool. Other than that, just
+a few minor fixes and adgustments here and there.

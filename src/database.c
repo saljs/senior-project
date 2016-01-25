@@ -92,7 +92,7 @@ void linkInput(input* pattern, int type, memory* database)
         }
         lastCost = cost;
         steps++;
-        cost = steps / matchprob;
+        cost = steps / (matchprob + 1);
         if(matchprob > BRANCH_LIMIT)
         {
             memory* loop = next;
@@ -154,14 +154,18 @@ memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
     return updated;
 }
 
-memory* compile(input* pattern, memory* dataset, memory* list, int levels)
+void compileMem(input* pattern, memory* dataset, memory** list, int levels)
 {
     if(levels == 0)
     {
-        return NULL;
+        return;
     }
-    memory* dataList = newMemory(list);
-    
+    if(list == NULL)
+    {
+        return;
+    }
+    memory* dataList = newMemory(*list);
+    *list = dataList;
     memory* loop = dataset;
     while(loop->uuid > pattern->link)
     {
@@ -192,12 +196,12 @@ memory* compile(input* pattern, memory* dataset, memory* list, int levels)
         input* parser = loop->inputs[i];
         while(parser != NULL)
         {
-            compile(parser, loop, dataList, levels-1);
+            compileMem(parser, loop, list, levels-1);
             input* tmp = parser->next;
             parser = tmp;
         }
     }
-    return dataList;
+    return;
 }
 
 memory* loadDatabase(const char* savefile)

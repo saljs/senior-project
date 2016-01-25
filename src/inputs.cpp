@@ -36,7 +36,7 @@ input* getInput(int type, memory* database)
     }
     else if(type == 1)
     {
-        char* imagePath = readline("Path to image input");
+        char* imagePath = readline("Path to image input:");
         if(imagePath == NULL)
         {
             return NULL;
@@ -121,6 +121,7 @@ float compareInputs(input* input1, input* input2, int type)
         {
             return 0;
         }
+        double FLANNtest;
         int minHessian = 400;
         SurfFeatureDetector detector(minHessian);
         std::vector<KeyPoint> keypoints_1, keypoints_2;
@@ -130,37 +131,45 @@ float compareInputs(input* input1, input* input2, int type)
         Mat descriptors_1, descriptors_2;
         extractor.compute(img_1, keypoints_1, descriptors_1);
         extractor.compute(img_2, keypoints_2, descriptors_2);
-        FlannBasedMatcher matcher;
-        std::vector< DMatch > matches;
-        matcher.match(descriptors_1, descriptors_2, matches);
-        double max_dist = 0, min_dist = 100;
-        for( int i = 0; i < descriptors_1.rows; i++ )
-        { 
-            double dist = matches[i].distance;
-            if( dist < min_dist ) 
-            {
-                min_dist = dist;
-            }
-            if( dist > max_dist ) 
-            {
-                max_dist = dist;
-            }
-        }
-        std::vector< DMatch > good_matches;
-        for( int i = 0; i < descriptors_1.rows; i++ )
-        { 
-            if( matches[i].distance <= max(2*min_dist, 0.02) )
-            { 
-                good_matches.push_back( matches[i]); 
-            }
-        }
-        double TotalDist = 0.0;
-        for( int i = 0; i < (int)good_matches.size(); i++ )
+        if (descriptors_1.empty() || descriptors_2.empty())
         {
-            TotalDist += good_matches[i].distance;
+            //no desciptors found, so just compare by color
+            FLANNtest = 0;
         }
-        double avgdist = TotalDist / (int)good_matches.size();
-        double FLANNtest = 1 - avgdist;
+        else
+        {
+             FlannBasedMatcher matcher;
+             std::vector< DMatch > matches;
+             matcher.match(descriptors_1, descriptors_2, matches);
+             double max_dist = 0, min_dist = 100;
+             for( int i = 0; i < descriptors_1.rows; i++ )
+             { 
+                 double dist = matches[i].distance;
+                 if( dist < min_dist ) 
+                 {
+                     min_dist = dist;
+                 }
+                 if( dist > max_dist ) 
+                 {
+                     max_dist = dist;
+                 }
+             }
+             std::vector< DMatch > good_matches;
+             for( int i = 0; i < descriptors_1.rows; i++ )
+             { 
+                 if( matches[i].distance <= max(2*min_dist, 0.02) )
+                 { 
+                     good_matches.push_back( matches[i]); 
+                 }
+             }
+             double TotalDist = 0.0;
+             for( int i = 0; i < (int)good_matches.size(); i++ )
+             {
+                 TotalDist += good_matches[i].distance;
+             }
+             double avgdist = TotalDist / (int)good_matches.size();
+             FLANNtest = 1 - avgdist;
+        }
         
         //calculate similarity using histograms
         Mat hsv_1, hsv_2;

@@ -39,6 +39,6 @@ int saveDatabase(const char* basedir, memory* start);
 void disassemble(memory* start);
 memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger);
 void linkInput(input* pattern, int type, memory* database);
-memory* compile(input* pattern, memory* dataset, memory* list, int levels);
+void compileMem(input* pattern, memory* dataset, memory** list, int levels);
 
 #endif
