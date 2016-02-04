@@ -16,7 +16,7 @@ void error(const char* message)
 {
     fputs(message, stderr);
 }
-void visualizer(memory* database)
+void visualizer(memory* database) //prints ascii representation of database
 {
     memory* loop = database;
     while(loop != NULL)
@@ -44,18 +44,18 @@ void visualizer(memory* database)
 int main(int argc, char* argv[])
 {
     memory* database;
-    if(argc == 3)
+    if(argc == 3) //just load database from a file, print, and exit.
     {
         database = loadDatabase(argv[1]);
         visualizer(database);
         disassemble(database);
         return 0;
     }
-    if(argc < 2)
+    if(argc < 2) //create new database from nothing
     {
         database = newMemory(NULL);
     }
-    else
+    else //load database from file
     {
         database = loadDatabase(argv[1]);
     }
@@ -66,6 +66,7 @@ int main(int argc, char* argv[])
     }
     while(true)
     {
+        //get inputs
         input* text = getInput(0, database);
         printf("\n");
         input* image = getInput(1, database);
@@ -123,7 +124,7 @@ int main(int argc, char* argv[])
             database = AddtoMem(image, 1, database, NULL);
         }
     }
-    if(argc < 2)
+    if(argc < 2) //overwrite preexiting database file
     {
         int save = saveDatabase("database", database); 
         if(save != 0)
@@ -132,7 +133,7 @@ int main(int argc, char* argv[])
             printf("Error code: %d\n", save);
         }         
     }
-    else
+    else //create new database file
     {
         int save = saveDatabase(argv[1], database);
         if(save != 0)
