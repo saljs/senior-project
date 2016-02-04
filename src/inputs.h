@@ -1,8 +1,7 @@
 /* inputs.h
- * This file should not be modified except for NUMINPUTS and threshold
- * constants. Make changes to the actual functions in inputs.cpp, that
- *  way the function declarations and usage will remain constant across
- * implementations. 
+ * This file should not be modified. Make changes to the actual 
+ * functions in inputs.c, that  way the function declarations
+ * and usage will remain constant across implementations. 
 */
 #include "database.h"
 

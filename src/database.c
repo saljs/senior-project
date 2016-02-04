@@ -1,3 +1,8 @@
+/* database.c
+ * This file all the database-specific functions that
+ * remain constant across implemtations.
+ */
+
 #include "database.h"
 #include "inputs.h"
 #include <dirent.h>
@@ -9,6 +14,7 @@
 #include <stdbool.h>
 #include <math.h>
 
+/* Returns a pointer to a sanitized new memory, or NULL on error. If you pass it a memory already part of a list it will append the the list, otherwise if it's passed NULL it will start a new list. */
 memory* newMemory(memory* start)
 {
     memory* newMem = malloc(sizeof(memory));
@@ -32,12 +38,14 @@ memory* newMemory(memory* start)
     return newMem;
 }
 
+/* Adds an input to the current memory passed to it. The index is the index of the input. */
 void addInput(memory* current, input* toAdd, int index)
 {
     toAdd->next = current->inputs[index];
     current->inputs[index] = toAdd;
 }
 
+/* Safely frees the memory list passed to it. */
 void disassemble(memory* start)
 {
     memory* next = start;
@@ -64,6 +72,7 @@ void disassemble(memory* start)
     }
 }
 
+/* Parses over the database and links the inpout pattern. The database arg is the database to be searched, and the type is the index of the input pattern. */
 void linkInput(input* pattern, int type, memory* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
@@ -74,10 +83,10 @@ void linkInput(input* pattern, int type, memory* database)
         float matchprob = 0;
         input* currInput = next->inputs[type];
         input* tmpSim;
-        while(currInput != NULL)
+        while(currInput != NULL) //iterate over all inputs in current memory
         {
-            float similarity = compareInputs(pattern, currInput, type);
-            if(similarity > matchprob)
+            float similarity = compareInputs(pattern, currInput, type); //compare them with the pattern input
+            if(similarity > matchprob) //if the input is the most simalimar of all inputs in the memory so far, save it
             {
                 matchprob = similarity;
                 tmpSim = currInput;
@@ -85,15 +94,15 @@ void linkInput(input* pattern, int type, memory* database)
             input* tmp = currInput->next;
             currInput = tmp;
         }
-        if(matchprob > simConf)
+        if(matchprob > simConf) //if the current similar is the most similar so far, save it
         {
             mostSim = next->uuid;
             simConf = matchprob;
         }
         lastCost = cost;
         steps++;
-        cost = steps / (matchprob + 1);
-        if(matchprob > BRANCH_LIMIT)
+        cost = steps / (matchprob + 1); //calculate algorithm cost
+        if(matchprob > BRANCH_LIMIT) //if the current memosry is more similar than the BRANCH_LIMIT, go to the linked memory instead of iterating linearly
         {
             memory* loop = next;
             while(loop->uuid > tmpSim->link)
@@ -107,17 +116,18 @@ void linkInput(input* pattern, int type, memory* database)
             }
             next = loop;
         }
-        else
+        else //iteralte over memory list linearly
         {
             memory* tmp = next->next;
             next = tmp;
         }
-    } while(cost * STOP_LIMIT > lastCost && next != NULL);
-    pattern->link = mostSim;
+    } while(cost * STOP_LIMIT > lastCost && next != NULL); //check stop conditions
+    pattern->link = mostSim; //link input to the most similar one found
     pattern->confidence = simConf;
     return;
 }
 
+/* Adds a new input to the memory list, decieding whether to append to current memory or create a new one. If newTrigger is not NULL and points to a bool, it will be set to true if there is a split, and false otherwise. Returns the start of the database, possibly changed, or NULL on error. */
 memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
 {
     int count = 0;
@@ -130,30 +140,35 @@ memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
         input* tmp = next->next;
         next = tmp;
     }
-    mean = sum / count;
+    mean = sum / count; //calculate mean similarity to the inputs currently in the memory
     memory* updated;
-    if(mean > SPLIT_LIMIT || isnan(mean))
+    if(mean > SPLIT_LIMIT || isnan(mean)) //append the input to current memory
     {
         if(newTrigger != NULL)
         {
-            *newTrigger = true;
+            *newTrigger = false;
         }
         addInput(database, newInput, index);
         updated = database;
     }
-    else
+    else //split the input into a new memory
     {
        if(newTrigger != NULL)
        {
            *newTrigger = true;
        }
        memory* newStart = newMemory(database);
+       if(newStart == NULL)
+       {
+           return NULL;
+       }
        addInput(newStart, newInput, index);
        updated = newStart;
     }
     return updated;
 }
 
+/* Compiles a new memory list, int levels deep, based on what pattern is linked to. Dataset should point to the database, and list should point to a NULL memory pointer, that the composite will eventually be stored in. */
 void compileMem(input* pattern, memory* dataset, memory** list, int levels)
 {
     if(levels == 0)
@@ -167,7 +182,7 @@ void compileMem(input* pattern, memory* dataset, memory** list, int levels)
     memory* dataList = newMemory(*list);
     *list = dataList;
     memory* loop = dataset;
-    while(loop->uuid > pattern->link)
+    while(loop->uuid > pattern->link) //jump to the linked memory in pattern
     {
         memory* tmp = loop->next;
         loop = tmp;
@@ -176,7 +191,7 @@ void compileMem(input* pattern, memory* dataset, memory** list, int levels)
             return NULL;
         }
     }
-    for(int i = 0; i < NUMINPUTS; i++)
+    for(int i = 0; i < NUMINPUTS; i++) //copy the input data into a new list
     {
         input* parser = loop->inputs[i];
         while(parser != NULL)
@@ -191,12 +206,12 @@ void compileMem(input* pattern, memory* dataset, memory** list, int levels)
             parser = tmp;
         }
     }
-    for(int i = 0; i < NUMINPUTS; i++)
+    for(int i = 0; i < NUMINPUTS; i++) //iterate over all inputs in the memory
     {
         input* parser = loop->inputs[i];
-        while(parser != NULL)
+        while(parser != NULL) 
         {
-            compileMem(parser, loop, list, levels-1);
+            compileMem(parser, loop, list, levels-1); //recurse until levels reaches 0
             input* tmp = parser->next;
             parser = tmp;
         }
@@ -204,6 +219,7 @@ void compileMem(input* pattern, memory* dataset, memory** list, int levels)
     return;
 }
 
+/* Loads the memory database from savefile and returns a pointer to it on success, or NULL on an error */
 memory* loadDatabase(const char* savefile)
 {
     //open save file
@@ -291,6 +307,7 @@ memory* loadDatabase(const char* savefile)
     return first;
 }
 
+/* Saves the database to a savefile. Returns -1 on read errrors, and -2 if there's an error opening the file. */
 int saveDatabase(const char* savefile, memory* start)
 {
     //open save file
