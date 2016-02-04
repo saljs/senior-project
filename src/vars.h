@@ -1,3 +1,9 @@
+/* vars.h
+ * This file contains constants that need to be
+ * fine tuned depending on the application the
+ * code is being used for.
+ */
+
 #ifndef VARS_H_
 #define VARS_H_
 
