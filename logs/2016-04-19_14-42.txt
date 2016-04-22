@@ -1,0 +1,11 @@
+Senior project log for 2016-04-19_14-42
+Time logged: 25
+Worked on hardware stuff. Spent the beginning of last week testing the solar
+panel to see if it still works, it doesn't. Also, my battery doesn't support
+passthrough. So instead of solar charging, I'm just going to connect up a
+fifth CDS cell and let the program read that instead of voltage off a panel.
+To the robot it won't be any differnt than actually having a solar panel
+connected up, only it won't charge anything. Got the control board all wired
+up, Everything works real nice. Also, my camera board doesn't work, which is
+irritating, so I wired up an old integrated webcam to work over USB. That'll
+have to do.
