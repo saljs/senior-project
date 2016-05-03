@@ -1,10 +1,7 @@
 #include "inputs.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-
+#include <pthread.h>
+#include <stdbool.h>
 #include <iostream>
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -15,47 +12,51 @@
 using namespace std;
 using namespace cv;
 
+Mat cameraFrame;
+bool closeThread = false;
+
+void* capture(void* arg)
+{
+    VideoCapture camera;
+    if(!camera.open(0))
+    {
+        pthread_exit(NULL);
+    }
+    while(!closeThread)
+    {
+        camera >> cameraFrame;
+    }
+    pthread_exit(NULL);
+    return NULL;
+}
+
+void startCapture()
+{
+    pthread_t captureThread;
+    pthread_create(&captureThread, NULL, capture, NULL);
+}
+
+void stopCapture()
+{
+    closeThread = true;
+}
+
 input* getInput(int type, memory* database)
 {
     if(type == 0)
     {
-        char* textIn = readline("Text to input:");
-        if(textIn == NULL)
-        {
-            return NULL;
-        }
-        else
-        {
-            input* newInput = (input*)malloc(sizeof(input));
-            newInput->data = textIn;
-            newInput->dataSize = strlen(textIn)+1;
-            linkInput(newInput, type, database);
-            return newInput;
-        }
-
-    }
-    else if(type == 1)
-    {
-        char* imagePath = readline("Path to image input:");
-        if(imagePath == NULL)
-        {
-            return NULL;
-        }
-        else
-        {
-            input* newInput = (input*)malloc(sizeof(input));
-            Mat image = imread(imagePath, CV_LOAD_IMAGE_COLOR);
-            newInput->data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
-            int ImgType = image.type();
-            memmove(newInput->data, &image.rows, sizeof(int));
-            memmove(newInput->data+sizeof(int), &image.cols, sizeof(int));
-            memmove(newInput->data+sizeof(int)*2, &ImgType, sizeof(int));
-            memmove(newInput->data+sizeof(int)*3, image.step.p, sizeof(size_t));
-            memmove(newInput->data+sizeof(int)*3 + sizeof(size_t), image.data, image.elemSize()*image.rows*image.cols);
-            newInput->dataSize = sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols;
-            linkInput(newInput, type, database);
-            return newInput;
-        }
+        input* newInput = (input*)malloc(sizeof(input));
+        Mat image = cameraFrame;
+        newInput->data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
+        int ImgType = image.type();
+        memmove(newInput->data, &image.rows, sizeof(int));
+        memmove(newInput->data+sizeof(int), &image.cols, sizeof(int));
+        memmove(newInput->data+sizeof(int)*2, &ImgType, sizeof(int));
+        memmove(newInput->data+sizeof(int)*3, image.step.p, sizeof(size_t));
+        memmove(newInput->data+sizeof(int)*3 + sizeof(size_t), image.data, image.elemSize()*image.rows*image.cols);
+        newInput->dataSize = sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols;
+        linkInput(newInput, type, database);
+        return newInput;
     }
     return NULL;
 }
@@ -64,36 +65,6 @@ float compareInputs(input* input1, input* input2, int type)
 {
     float similarity = 0;
     if(type == 0)
-    {
-        //compare the two strings for occurances of the same word
-        float count = 0, size = 0;
-        char* string1 = (char*)malloc(input1->dataSize);
-        char* string2 = (char*)malloc(input2->dataSize);
-        memmove(string1, input1->data, input1->dataSize);
-        memmove(string2, input2->data, input2->dataSize);
-        char* saveptr1;
-        char* saveptr2;
-        char* firstWord = strtok_r(string1, " ", &saveptr1);
-        while(firstWord != NULL)
-        {
-            char* secondWord = strtok_r(string2, " ", &saveptr2);
-            while(secondWord != NULL)
-            {
-                if(strcmp(firstWord, secondWord) == 0)
-                {
-                    count++;
-                }
-                secondWord = strtok_r(NULL, " ", &saveptr2);
-            }
-            firstWord = strtok_r(NULL, " ", &saveptr1);
-            memmove(string2, input2->data, input2->dataSize);
-            size++;
-        }
-        similarity = count / size;
-        free(string1);
-        free(string2);
-    }
-    else if(type == 1)
     {
         //compare two images using FLANN matching algorithm
         //rebuild Mat objects from inputs
