@@ -1,0 +1,8 @@
+Senior project log for 2016-05-13_15-20
+Time logged: 4
+Started writing code for the robot-client, coming along well I think. Also
+made custom ISO for the cluster, but haven't been able to set it up beacuse
+of people taking forever to get back to me
+
+https://www.linuxjournal.com/article/5690?page=0,0
+http://leenissen.dk/fann/wp/help/getting-started/4
