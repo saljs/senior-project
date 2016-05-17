@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <wiringPi.h>
+#include <mcp3004.h>
 
 typedef struct instructions   //instructrions for robot from neural net
 {
@@ -20,28 +21,49 @@ typedef struct instructions   //instructrions for robot from neural net
 
 int sendToServer(int socket, const void* buffer, size_t bufferLength)
 {
-	int n = write(socket,cameraImg,sizeof(input));
+	int n = write(socket, buffer, bufferLength);
     if (n < 0) 
     {
         return 1;
     }
-    char buffer[255];
-    n = read(sockfd,buffer,255);
+    char returnBuf[255];
+    n = read(socket,returnBuf,255);
     if (n < 0)
     {
         return -1;
     }
-    if(!strcmp(buffer, "OK"))
+    if(!strcmp(returnBuf, "OK"))
     {
 		return -2;
 	}
 	return 0;
 }
 
+float getDistance(int trig, int echo)
+{
+    //Send trig pulse
+    digitalWrite(trig, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trig, LOW);
+
+    //Wait for echo start
+    while(digitalRead(echo) == LOW);
+
+    //Wait for echo end
+    long startTime = micros();
+    while(digitalRead(echo) == HIGH);
+    long travelTime = micros() - startTime;
+
+    //Get distance in cm
+    float distance = travelTime * 0.01715;
+
+    return distance;
+}
+
 void error(const char* message)
 {
     fputs(message, stderr);
-    exit();
+    exit(0);
 }
 
 int setupHardware()
@@ -59,6 +81,7 @@ int setupHardware()
     pinMode(ECHO, INPUT);
     pinMode(TRIG1, OUTPUT);
     pinMode(ECHO1, INPUT);
+    startCapture();
     return 0;
 }
         
@@ -85,7 +108,6 @@ int main(int argc, char** argv)
     {
         error("ERROR on binding");
     }
-    instructions serverInput;
 
     //init sender socket
     int senderSock;
@@ -96,7 +118,7 @@ int main(int argc, char** argv)
     {
         error("ERROR opening socket");
     }
-    server = gethostbyname(SEND_PORT);
+    server = gethostbyname(SERVER);
     if (server == NULL) {
         fprintf(stderr,"ERROR, no such host\n");
         exit(0);
@@ -104,7 +126,7 @@ int main(int argc, char** argv)
     bzero((char *) &Send_addr, sizeof(Send_addr));
     Send_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, (char *)&Send_addr.sin_addr.s_addr, server->h_length);
-    Send_addr.sin_port = htons(portno);
+    Send_addr.sin_port = htons(SEND_PORT);
     if (connect(senderSock,(struct sockaddr *) &Send_addr,sizeof(Send_addr)) < 0) 
     {
         error("ERROR connecting");
@@ -123,10 +145,10 @@ int main(int argc, char** argv)
             error("ERROR on accept");
         }
         short int ready = 0;
-        n = read(newsockfd,ready,sizeof(short int));
+        n = read(newsockfd,&ready,sizeof(short int));
         if (n < 0)
         {
-            error("ERROR reading from socket";
+            error("ERROR reading from socket");
         }
         char returnHead[] = "OK";
         n = write(newsockfd,returnHead,strlen(returnHead));
@@ -138,7 +160,8 @@ int main(int argc, char** argv)
         //check if the server is indeed ready
         if(ready != 1)
         {
-            continue;
+            //server is telling us to exit cleanly.
+            break;
         }        
         
         //send inputs to server
@@ -148,17 +171,20 @@ int main(int argc, char** argv)
         {
 			newInput = getInput(i, dummy);
             digitalWrite(STATUS_LED, 1);
-			if(!sendToServer(senderSocket, newInput, sizeof(input)))
+			if(!sendToServer(senderSock, newInput, sizeof(input)))
 			{
 				error("ERROR sending to server");
 			}
-			if(!sendToServer(senderSocket, newInput->data, newInput->dataSize))
+			if(!sendToServer(senderSock, newInput->data, newInput->dataSize))
 			{
 				error("ERROR sending to server");
 			}
             digitalWrite(STATUS_LED, 0);
 		}
-		
+		free(newInput->data);
+        free(newInput);
+        disassemble(dummy);
+
         listen(sockfd,5);   //listen for instructions
         digitalWrite(STATUS_LED, 1);
         //handle server data
@@ -168,13 +194,13 @@ int main(int argc, char** argv)
         {
             error("ERROR on accept");
         }
-        bzero(serverInput,sizeof(instructions));
-        n = read(newsockfd,serverInput,sizeof(instuctions));
+        instructions serverInput;
+        bzero(&serverInput,sizeof(instructions));
+        n = read(newsockfd,&serverInput,sizeof(instructions));
         if (n < 0)
         {
-            error("ERROR reading from socket";
+            error("ERROR reading from socket");
         }
-        returnHead[] = "OK";
         n = write(newsockfd,returnHead,strlen(returnHead));
         if (n < 0) 
         {
@@ -204,7 +230,13 @@ int main(int argc, char** argv)
             digitalWrite(MOTORS, 0);
         }
         
-        if(serverInput.direction == 1)
+        float score = 0.5;
+        if(getDistance(TRIG, ECHO) < 7)
+        {
+            //decrease score because you crashed into stuff
+            score -= 0.25;
+        }
+        else if(serverInput.direction == 1)
         {
             //forward
             digitalWrite(MOTORS, 0); //for sanity
@@ -214,7 +246,12 @@ int main(int argc, char** argv)
             delay(DRIVE_DUR);
             digitalWrite(MOTORS, 0);
         }
-        if(serverInput.direction == 2)
+        if(getDistance(TRIG1, ECHO1) < 7)
+        {
+            //decrease score because you backed into stuff
+            score -= 0.25;
+        }
+        else if(serverInput.direction == 2)
         {
             //backwards
             digitalWrite(MOTORS, 0); //for sanity
@@ -226,7 +263,17 @@ int main(int argc, char** argv)
         }
         
         //calculate new score
-        
+        //subtract points for hitting stuff
+        //add points for direct light 
+        score += ((float)analogRead(SOLAR_T) / 1024.0) / 2;
+        if(!sendToServer(senderSock, &score, sizeof(float)))
+        {
+            error("ERROR sending to server");
+        }
 	}
+    stopCapture();
+    close(senderSock);
+    close(sockfd);
+    return 0;
 }
 

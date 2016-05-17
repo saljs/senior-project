@@ -4,7 +4,7 @@ LDFLAGS=$(shell pkg-config --libs opencv) -lreadline -lcurses
 
 all: demo
 
-demo: main.o database.o inputs.o
+robot: main.o database.o inputs.o
 	$(CC) $(CFLAGS) $(LDFLAGS) database.o inputs.o main.o -o demo
 
 main.o: main.cpp

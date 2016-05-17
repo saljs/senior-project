@@ -3,6 +3,8 @@
 
 #define LISTEN_PORT 8085
 #define SEND_PORT 8085
+#define SERVER "gibson-1"
+#define ROBOT "robot"
 
 #define STATUS_LED 0
 
