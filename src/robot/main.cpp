@@ -12,6 +12,7 @@
 #include <netdb.h>
 #include <wiringPi.h>
 #include <mcp3004.h>
+#include <errno.h>
 
 typedef struct instructions   //instructrions for robot from neural net
 {
@@ -19,19 +20,47 @@ typedef struct instructions   //instructrions for robot from neural net
     short int  steering;
 } instructions;
 
-int sendToServer(int socket, const void* buffer, size_t bufferLength)
+void error(const char* message)
 {
-	int n = write(socket, buffer, bufferLength);
+    fprintf(stderr, "%s - %s\n", message, strerror(errno));
+    exit(0);
+}
+
+int sendToServer(const void* buffer, size_t bufferLength)
+{
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    { 
+        error("ERROR opening socket");
+    }
+    server = gethostbyname(SERVER);
+    if(server == NULL) 
+    {
+        error("ERROR, no such host");
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+    serv_addr.sin_port = htons(SEND_PORT);
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+    {
+        error("ERROR connecting");
+    }
+	n = write(sockfd, buffer, bufferLength);
     if (n < 0) 
     {
         return 1;
     }
     char returnBuf[255];
-    n = read(socket,returnBuf,255);
+    n = read(sockfd,returnBuf,255);
     if (n < 0)
     {
         return -1;
     }
+    close(sockfd);
     if(!strcmp(returnBuf, "OK"))
     {
 		return -2;
@@ -60,12 +89,6 @@ float getDistance(int trig, int echo)
     return distance;
 }
 
-void error(const char* message)
-{
-    fputs(message, stderr);
-    exit(0);
-}
-
 int setupHardware()
 {
     if (wiringPiSetup () == -1)
@@ -88,8 +111,11 @@ int setupHardware()
 int main(int argc, char** argv)
 {
     //init hardware
-    
-    //init listener socket socket
+    if(setupHardware() == 1)
+    {
+        error("error setting up hardware");
+    }
+    //init listener socket 
     int sockfd, newsockfd;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -109,29 +135,7 @@ int main(int argc, char** argv)
         error("ERROR on binding");
     }
 
-    //init sender socket
-    int senderSock;
-    struct sockaddr_in Send_addr;
-    struct hostent *server;
-    senderSock = socket(AF_INET, SOCK_STREAM, 0);
-    if (senderSock < 0) 
-    {
-        error("ERROR opening socket");
-    }
-    server = gethostbyname(SERVER);
-    if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        exit(0);
-    }
-    bzero((char *) &Send_addr, sizeof(Send_addr));
-    Send_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, (char *)&Send_addr.sin_addr.s_addr, server->h_length);
-    Send_addr.sin_port = htons(SEND_PORT);
-    if (connect(senderSock,(struct sockaddr *) &Send_addr,sizeof(Send_addr)) < 0) 
-    {
-        error("ERROR connecting");
-    }
-
+    float lastLval = 0;
     while(true) //main loop
     {
 
@@ -161,6 +165,7 @@ int main(int argc, char** argv)
         if(ready != 1)
         {
             //server is telling us to exit cleanly.
+            printf("exiting...\n");
             break;
         }        
         
@@ -171,11 +176,11 @@ int main(int argc, char** argv)
         {
 			newInput = getInput(i, dummy);
             digitalWrite(STATUS_LED, 1);
-			if(!sendToServer(senderSock, newInput, sizeof(input)))
+			if(!sendToServer(newInput, sizeof(input)))
 			{
 				error("ERROR sending to server");
 			}
-			if(!sendToServer(senderSock, newInput->data, newInput->dataSize))
+			if(!sendToServer(newInput->data, newInput->dataSize))
 			{
 				error("ERROR sending to server");
 			}
@@ -265,14 +270,23 @@ int main(int argc, char** argv)
         //calculate new score
         //subtract points for hitting stuff
         //add points for direct light 
-        score += ((float)analogRead(SOLAR_T) / 1024.0) / 2;
-        if(!sendToServer(senderSock, &score, sizeof(float)))
+        float Lval = (float)analogRead(SOLAR_T) / 1024.0;
+        score += Lval - lastLval;
+        if(score < 0)
+        {
+            score = 0;
+        }
+        else if(score > 1)
+        {
+            score = 1;
+        }
+        lastLval = Lval;
+        if(!sendToServer(&score, sizeof(float)))
         {
             error("ERROR sending to server");
         }
 	}
     stopCapture();
-    close(senderSock);
     close(sockfd);
     return 0;
 }

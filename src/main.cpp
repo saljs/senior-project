@@ -12,10 +12,58 @@
 using namespace std;
 using namespace cv;
 
+#define SERVER_PORT 8087
+#define SEND_PORT 8085
+#define ROBOT "robot"
+
 void error(const char* message)
 {
-    fputs(message, stderr);
+    fprintf(stderr, "%s - %s\n", message, strerror(errno));
+    exit(0);
 }
+
+int sendToRobot(const void* buffer, size_t bufferLength)
+{
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    { 
+        error("ERROR opening socket");
+    }
+    server = gethostbyname(ROBOT);
+    if(server == NULL) 
+    {
+        error("ERROR, no such host");
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+    serv_addr.sin_port = htons(SEND_PORT);
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+    {
+        error("ERROR connecting");
+    }
+	n = write(sockfd, buffer, bufferLength);
+    if (n < 0) 
+    {
+        return 1;
+    }
+    char returnBuf[255];
+    n = read(sockfd,returnBuf,255);
+    if (n < 0)
+    {
+        return -1;
+    }
+    close(sockfd);
+    if(!strcmp(returnBuf, "OK"))
+    {
+		return -2;
+	}
+	return 0;
+}
+
 void visualizer(memory* database) //prints ascii representation of database
 {
     memory* loop = database;
@@ -43,29 +91,55 @@ void visualizer(memory* database) //prints ascii representation of database
 
 int main(int argc, char* argv[])
 {
+    //init the database
     memory* database;
-    if(argc == 3) //just load database from a file, print, and exit.
-    {
-        database = loadDatabase(argv[1]);
-        visualizer(database);
-        disassemble(database);
-        return 0;
-    }
-    if(argc < 2) //create new database from nothing
+    if(access(DATABASE_F, F_OK) == -1) 
     {
         database = newMemory(NULL);
     }
     else //load database from file
     {
-        database = loadDatabase(argv[1]);
+        database = loadDatabase(DATABASE_F);
     }
     if(database == NULL)
     {
         error("problem with the database\n");
-        return -1;
     }
+    //init the ANN
+    struct fann *ann = fann_create_standard(LAYERS, (NUMINPUTS-1) * DBINPUTS, HIDDEN, 2);
+    fann_set_activation_function_hidden(ann, FANN_SIGMOID);
+    fann_set_activation_function_output(ann, FANN_SIGMOID);
+    fann_type *calc_out;
+    fann_type inputNeurons[(NUMINPUTS-1)*DBINOUTS];
+	//init listener socket 
+    int sockfd, newsockfd;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr, cli_addr;
+    int n;
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+        error("ERROR opening socket");
+    }
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(SERVER_PORT);
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+    {
+        error("ERROR on binding");
+    }
+
+	
     while(true)
     {
+		//send ready signal
+		short int ready = 1;
+		if(!sendToRobot(&ready, sizeof(short int)))
+		{
+			error("ERROR comminicating with robot");
+		}
         //get inputs
         input* text = getInput(0, database);
         printf("\n");

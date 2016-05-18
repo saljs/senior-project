@@ -8,7 +8,7 @@
 #define VARS_H_
 
 //The number of inputs being used in the program
-#define NUMINPUTS 2
+#define NUMINPUTS 6
 //The threshold for branching in the search function. Higher numbers will lead to a more accurate but constrained and possibly longer search. Max is one (branches only on perfect match) and minimum is 0 (always branches)
 #define BRANCH_LIMIT 0.85
 //The stopping threshold for the search function. Higher numbers will cause the function to search for longer
