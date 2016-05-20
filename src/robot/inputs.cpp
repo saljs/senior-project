@@ -76,7 +76,7 @@ input* getInput(int type, memory* database)
         //Get distance in cm
         input* newInput = (input*)malloc(sizeof(input));
         newInput->data = malloc(sizeof(float));
-        *(float *)newInput->data = travelTime * 0.01715;
+        *(float *)newInput->data = ((travelTime * 0.01715) - 5) / 3500;
         newInput->dataSize = sizeof(float);
         linkInput(newInput, type, database);
         return newInput;
@@ -214,14 +214,7 @@ float compareInputs(input* input1, input* input2, int type)
         free(data1);
         free(data2);
     }
-    else if(type == 1) //distance sensor
-    {
-        //normalize distances
-        float z1 = (*(float *)input1->data - 5) / 3500;
-        float z2 = (*(float *)input2->data - 5) / 3500;
-        similarity = abs(z1 - z2);
-    }
-    else if(type >= 2 && type <= 5) //light sensors and score
+    else if(type >= 1 && type <= 5) //distance sensor, light sensors and score
     {
         similarity = abs(*(float *)input1->data - *(float *)input2->data);
     }

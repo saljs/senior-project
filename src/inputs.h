@@ -13,9 +13,4 @@ float compareInputs(input* input1, input* input2, int type);
 
 //Receives a input of type from whatever source. Can be blocking or nonblocking depending on agent setup.
 input* getInput(int type, memory* database);
-
-//extra stuff for camera
-void* capture(void* arg);
-void startCapture();
-void stopCapture();
 #endif

@@ -10,4 +10,6 @@
 #define DBINPUTS 5
 #define LAYERS 3
 #define HIDDEN 16
+#define MOD_VAL 0.1
+#define ALPHA 0.999
 #endif

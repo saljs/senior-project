@@ -9,105 +9,12 @@
 #include "opencv2/nonfree/features2d.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include <math.h>
-#include "hardware.h"
 
 using namespace std;
 using namespace cv;
 
-Mat cameraFrame;
-bool closeThread = false;
-
-void* capture(void* arg)
-{
-    VideoCapture camera;
-    if(!camera.open(0))
-    {
-        pthread_exit(NULL);
-    }
-    while(!closeThread)
-    {
-        camera >> cameraFrame;
-    }
-    pthread_exit(NULL);
-    return NULL;
-}
-
-void startCapture()
-{
-    pthread_t captureThread;
-    pthread_create(&captureThread, NULL, capture, NULL);
-}
-
-void stopCapture()
-{
-    closeThread = true;
-}
-
 input* getInput(int type, memory* database)
 {
-    if(type == 0) //frame from camera
-    {
-        input* newInput = (input*)malloc(sizeof(input));
-        Mat image = cameraFrame;
-        newInput->data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
-        int ImgType = image.type();
-        memmove(newInput->data, &image.rows, sizeof(int));
-        memmove(newInput->data+sizeof(int), &image.cols, sizeof(int));
-        memmove(newInput->data+sizeof(int)*2, &ImgType, sizeof(int));
-        memmove(newInput->data+sizeof(int)*3, image.step.p, sizeof(size_t));
-        memmove(newInput->data+sizeof(int)*3 + sizeof(size_t), image.data, image.elemSize()*image.rows*image.cols);
-        newInput->dataSize = sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols;
-        linkInput(newInput, type, database);
-        return newInput;
-    }
-    else if(type == 1) //ultrasonic sensor
-    {
-        //Send trig pulse
-        digitalWrite(TRIG, HIGH);
-        delayMicroseconds(10);
-        digitalWrite(TRIG, LOW);
-        //Wait for echo start
-        while(digitalRead(ECHO) == LOW);
-        //Wait for echo end
-        long startTime = micros();
-        while(digitalRead(ECHO) == HIGH);
-        long travelTime = micros() - startTime;
-        //Get distance in cm
-        input* newInput = (input*)malloc(sizeof(input));
-        newInput->data = malloc(sizeof(float));
-        *(float *)newInput->data = travelTime * 0.01715;
-        newInput->dataSize = sizeof(float);
-        linkInput(newInput, type, database);
-        return newInput;
-    }
-    else if(type == 2)//left light sensor
-    {
-        input* newInput = (input*)malloc(sizeof(input));
-        newInput->data = malloc(sizeof(float));
-        *(float *)newInput->data = (float)ananlogRead(SOLAR_L) / 1024.0;
-        newInput->dataSize = sizeof(float);
-        linkInput(newInput, type, database);
-        return newInput;
-    }
-    else if(type == 3)//right light sensor
-    {
-        input* newInput = (input*)malloc(sizeof(input));
-        newInput->data = malloc(sizeof(float));
-        *(float *)newInput->data = (float)ananlogRead(SOLAR_R) / 1024.0;
-        newInput->dataSize = sizeof(float);
-        linkInput(newInput, type, database);
-        return newInput;
-    }
-    else if(type == 4)//top light sensor
-    {
-        input* newInput = (input*)malloc(sizeof(input));
-        newInput->data = malloc(sizeof(float));
-        *(float *)newInput->data = (float)ananlogRead(SOLAR_T) / 1024.0;
-        newInput->dataSize = sizeof(float);
-        linkInput(newInput, type, database);
-        return newInput;
-    }
-    //inpu #5 will be added maunally by the server 
     return NULL;
 }
 
@@ -213,14 +120,7 @@ float compareInputs(input* input1, input* input2, int type)
         free(data1);
         free(data2);
     }
-    else if(type == 1) //distance sensor
-    {
-        //normalize distances
-        float z1 = (*(float *)input1->data - 5) / 3500;
-        float z2 = (*(float *)input2->data - 5) / 3500;
-        similarity = abs(z1 - z2);
-    }
-    else if(type >= 2 && type <= 5) //light sensors and score
+    else if(type >= 1 && type <= 5) //distance sensor, light sensors and score
     {
         similarity = abs(*(float *)input1->data - *(float *)input2->data);
     }

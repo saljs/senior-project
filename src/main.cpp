@@ -1,9 +1,17 @@
 #include "database.h"
 #include "inputs.h"
 #include "vars.h"
+#include "FANNvars.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <errno.h>
+#include "FANN/src/include/floatfann.h"
 
 #include <iostream>
 #include "opencv2/core/core.hpp"
@@ -12,15 +20,23 @@
 using namespace std;
 using namespace cv;
 
-#define SERVER_PORT 8087
+#define LISTEN_PORT 8087
 #define SEND_PORT 8085
 #define ROBOT "robot"
+#define DATABASE_F "database.dlsd"
+#define FANN_F "neural.net"
+#define TEMP_F "temp.file"
 
 void error(const char* message)
 {
     fprintf(stderr, "%s - %s\n", message, strerror(errno));
-    exit(0);
 }
+
+typedef struct instructions   //instructrions for robot from neural net
+{
+    short int direction;
+    short int  steering;
+} instructions;
 
 int sendToRobot(const void* buffer, size_t bufferLength)
 {
@@ -31,11 +47,13 @@ int sendToRobot(const void* buffer, size_t bufferLength)
     if (sockfd < 0)
     { 
         error("ERROR opening socket");
+        return -1;
     }
     server = gethostbyname(ROBOT);
     if(server == NULL) 
     {
         error("ERROR, no such host");
+        return -1;
     }
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -44,23 +62,49 @@ int sendToRobot(const void* buffer, size_t bufferLength)
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
     {
         error("ERROR connecting");
+        return -1;
     }
 	n = write(sockfd, buffer, bufferLength);
     if (n < 0) 
     {
-        return 1;
+        return -1;
     }
     char returnBuf[255];
+    bzero(returnBuf, 255);
     n = read(sockfd,returnBuf,255);
     if (n < 0)
     {
         return -1;
     }
     close(sockfd);
-    if(!strcmp(returnBuf, "OK"))
+    if(strncmp(returnBuf, "OK", 2) != 0)
     {
-		return -2;
+		return -1;
 	}
+	return 0;
+}
+
+int listenToRobot(int sockfd, void* buffer, size_t bufferLength)
+{
+	if (sockfd < 0)
+	{
+		error("ERROR on accept");
+        return -1;
+	}
+	int n = read(sockfd, buffer, bufferLength);
+	if (n < 0)
+	{
+		error("ERROR reading from socket");
+        return -1;
+	}
+	char returnHead[] = "OK";
+	n = write(sockfd, returnHead, strlen(returnHead));
+	if (n < 0) 
+	{
+		error("ERROR writing to socket");
+        return -1;
+	}
+	close(sockfd);
 	return 0;
 }
 
@@ -104,14 +148,33 @@ int main(int argc, char* argv[])
     if(database == NULL)
     {
         error("problem with the database\n");
+        return 1;
     }
     //init the ANN
-    struct fann *ann = fann_create_standard(LAYERS, (NUMINPUTS-1) * DBINPUTS, HIDDEN, 2);
-    fann_set_activation_function_hidden(ann, FANN_SIGMOID);
-    fann_set_activation_function_output(ann, FANN_SIGMOID);
+    struct fann *ann;
+    if(access(FANN_F, F_OK) == -1)
+    {
+        ann = fann_create_standard(LAYERS, 4+((NUMINPUTS-1) * DBINPUTS), HIDDEN, 2);
+        fann_set_activation_function_hidden(ann, FANN_SIGMOID);
+        fann_set_activation_function_output(ann, FANN_SIGMOID);
+    }
+    else
+    {
+        ann = fann_create_from_file(FANN_F);
+    }
+    
     fann_type *calc_out;
-    fann_type inputNeurons[(NUMINPUTS-1)*DBINOUTS];
-	//init listener socket 
+    fann_type inputNeurons[4+((NUMINPUTS-1)*DBINPUTS)];
+    //read tempurature from file if it exists
+    double temp = 1.0;
+    if(access(TEMP_F, F_OK) != -1)
+    {
+        FILE* tempFile = fopen(TEMP_F, "r");
+        fread(&temp, sizeof(double), 1, tempFile);
+        fclose(tempFile);
+    }
+
+    //init listener socket 
     int sockfd, newsockfd;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -120,84 +183,259 @@ int main(int argc, char* argv[])
     if (sockfd < 0)
     {
         error("ERROR opening socket");
+        return -1;
     }
     bzero((char *) &serv_addr, sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(SERVER_PORT);
+    serv_addr.sin_port = htons(LISTEN_PORT);
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
         error("ERROR on binding");
+        return -1;
     }
-
-	
-    while(true)
+    listen(sockfd,5);
+    clilen = sizeof(cli_addr);
+    
+    //init the rng
+    srandom(time(NULL));    
+    //define some variables for the annealing algorithm
+    float lastCost = INFINITY;
+    int lastWeight;
+    fann_type lastVal;
+    while(true) //wait for robot to connect
     {
-		//send ready signal
-		short int ready = 1;
-		if(!sendToRobot(&ready, sizeof(short int)))
-		{
-			error("ERROR comminicating with robot");
-		}
-        //get inputs
-        input* text = getInput(0, database);
-        printf("\n");
-        input* image = getInput(1, database);
-        printf("\n");
-        if(text == NULL && image == NULL)
+        printf("Waiting for robot to connect...");
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        short int connected;
+        if(listenToRobot(newsockfd, &connected, sizeof(short int)) != 0)
         {
-            //exit the program
-            break;
+            error("ERROR comminicating with robot");
+            continue;
         }
-        else if(text == NULL && image != NULL)
+        if(connected != 1)
         {
-            //outputting text based on image
-            memory* composite = NULL;
-            compileMem(image, database, &composite, 1);
-            database = AddtoMem(image, 1, database, NULL);
-            input* outLoop = composite->inputs[0];
-            while(outLoop != NULL)
+            error("ERROR robot sent unrecognized connected signal");
+            continue;
+        }
+        printf("Robot connected!\n");
+        while(true) //main loop
+        {	
+            //get inputs from robot
+            input* newInputs[4];
+            bool stopCond = false;
+            for(int i = 0; i < 5; i++)
             {
-                printf("%s\n", outLoop->data);
-                input* tmp = outLoop->next;
-                outLoop = tmp;
+	    		newInputs[i] = malloc(sizeof(input));
+	    		//ready to recieve data
+	    		short int ready = 1;
+	    		if(sendToRobot(&ready, sizeof(short int)) != 0)
+	    		{
+	    			error("ERROR comminicating with robot");
+                    stopCond = true;
+                    break;
+	    	    }
+	    	    //read input
+	    	    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+                if(listenToRobot(newsockfd, newInputs[i], sizeof(input)) != 0)
+                {
+                    error("ERROR robot is not responding");
+                    stopCond = true;
+                    break;
+                }
+              
+                void* tmp = malloc(newInputs[i]->dataSize);
+                //ready to recieve data
+	    		if(sendToRobot(&ready, sizeof(short int)) != 0)
+	    		{
+	    			error("ERROR comminicating with robot");
+                    stopCond = true;
+                    break;
+	    	    }
+	    	    //read data
+	    	    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+                if(listenToRobot(newsockfd, tmp, newInputs[i]->dataSize) != 0)
+                {
+                    error("ERROR robot is not responding");
+                    stopCond = true;
+                    break;
+                }
+                newInputs[i]->data = tmp;
+                linkInput(newInputs[i], i, database);
+	    	}
+            if(stopCond == true)
+            {
+                break;
+            }
+	    	//feed data into the input neurons
+            int i = 0;
+	    	for(; i < 5; i++)
+            {
+                inputNeurons[i] = *(float *)newInputs[i+1]->data;
+            }
+            //generate a composite memory
+            memory* composite = NULL;
+            compileMem(newInputs[0], database, &composite, DBINPUTS);
+            memory* next = composite;
+            for(int j = 0; j < DBINPUTS; j++)
+            {
+                for(int k = 1; k < 6; k++)
+                {
+                    if(next == NULL)
+                    {
+                        inputNeurons[i] = 0;
+                    }
+                    else
+                    {
+                        if(next->inputs[k] == NULL)
+                        {
+                            inputNeurons[i] = 0;
+                        }
+                        else
+                        {
+                            inputNeurons[i] = *(float *)next->inputs[k]->data;
+                        }
+                        next = next->next;
+                    }
+                    i++;
+                }
             }
             disassemble(composite);
-        }
-        else if(text != NULL && image == NULL)
-        {
-            //outputting image based on text
-            memory* composite = NULL;
-            compileMem(text, database, &composite, 1);
-            database = AddtoMem(text, 0, database, NULL);
-            input* outLoop = composite->inputs[1];
-            while(outLoop != NULL)
+            calc_out = fann_run(ann, inputNeurons);
+            //translate output to instructions for the robot
+            instructions netOutput;
+            if(calc_out[0] < 1/3)
             {
-                int rows, cols, type;
-                size_t step;
-                void* data = malloc(outLoop->dataSize - sizeof(int)*3+sizeof(size_t));
-                memmove(&rows, outLoop->data, sizeof(int));
-                memmove(&cols, outLoop->data+sizeof(int), sizeof(int));
-                memmove(&type, outLoop->data+sizeof(int)*2, sizeof(int));
-                memmove(&step, outLoop->data+sizeof(int)*3, sizeof(size_t));
-                memmove(data, outLoop->data+sizeof(int)*3+sizeof(size_t), outLoop->dataSize - sizeof(int)*3+sizeof(size_t));
-                Mat img(rows, cols, type, data, step);
-                namedWindow( "Image", WINDOW_AUTOSIZE );
-                imshow("Image", img);
-                waitKey(0);
-                input* tmp = outLoop->next;
-                outLoop = tmp;
+                netOutput.direction = 2;
             }
-            disassemble(composite);
+            else if(calc_out[0] >= 1/3 && calc_out[0] <= 2/3)
+            {
+                netOutput.direction = 0;
+            }
+            else if(calc_out[0] > 2/3)
+            {
+                netOutput.direction = 1;
+            }
+
+            if(calc_out[1] < 1/3)
+            {
+                netOutput.steering = 2;
+            }
+            else if(calc_out[1] >= 1/3 && calc_out[1] <= 2/3)
+            {
+                netOutput.steering = 0;
+            }
+            else if(calc_out[1] > 2/3)
+            {
+                netOutput.steering = 1;
+            }
+            //listen for ready signal
+	    	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+	    	short int ready = 0;
+	    	if(listenToRobot(newsockfd, &ready, sizeof(short int)) != 0)
+	    	{
+				error("ERROR robot is not responding");
+                break;
+			}
+	    	//check if the server is indeed ready
+	    	if(ready != 1)
+	    	{
+	    		//something went terribly wrong.
+	    		error("ERROR something went terribly wrong");
+	    		exit(1);
+	    	}
+	    	if(sendToRobot(&netOutput, sizeof(instructions)) != 0)
+	    	{
+	    		error("ERROR comminicating with robot");
+                break;
+	    	}
+	    	
+	    	//tell the robot we are ready to recive its score
+	    	ready = 1;
+	    	if(sendToRobot(&ready, sizeof(short int)) != 0)
+	    	{
+	    		error("ERROR comminicating with robot");
+                break;
+	    	}
+	    	float score;
+	    	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+	    	if(listenToRobot(newsockfd, &score, sizeof(float)) != 0)
+            {
+                error("ERROR robot is not responding");
+                break;
+            }
+	    	
+	    	//add inputs to database, starting with score
+	    	input* scoreIn = malloc(sizeof(input));
+	    	scoreIn->data = malloc(sizeof(float));
+            *(float *)scoreIn->data = score;
+            scoreIn->dataSize = sizeof(float);
+            linkInput(scoreIn, NUMINPUTS-1, database);
+            database = AddtoMem(scoreIn, NUMINPUTS-1, database, NULL);
+            for(int j = 0; j < NUMINPUTS - 1; j++)
+            {
+                database = AddtoMem(newInputs[j], j, database, NULL);
+            }
+
+            //anneal the net
+            float cost = 1 - score;
+            float a = M_E * ((lastCost - cost) / temp);
+            lastCost = cost;
+            int weight;
+            fann_type val;
+            if(a <= (float)random() / (double)RAND_MAX)
+            {
+                //go back to previous solution
+                weight = lastWeight;
+                val = lastVal;
+            }
+            else
+            {
+
+                //try new solution
+                weight = random() % ann->total_connections;
+                val = ann->weights[weight];
+                if(random() > RAND_MAX/2)
+                {
+                    val += MOD_VAL;
+                }
+                else
+                {
+                    val -= MOD_VAL;
+                }
+            }
+            //save current value
+            lastWeight = weight;
+            lastVal = val;
+            //change value to new/old one
+            ann->weights[weight] = val;
+            //decrease temperature
+            temp = temp * ALPHA;
         }
-        else if(text != NULL && image != NULL)
+        printf("Lost connection with robot\n");
+        //save all the importatnt junk
+        //database
+        printf("Saving the database...");
+        int save = saveDatabase(DATABASE_F, database); 
+        if(save != 0)
         {
-            //save both inputs and move on
-            database = AddtoMem(text, 0, database, NULL);
-            database = AddtoMem(image, 1, database, NULL);
+            error("error saving the database!\n");
+            printf("Error code: %d\n", save);
         }
+        printf("done!\n");
+        //neural net
+        printf("Saving neural net...");
+        fann_save(ann, FANN_F);
+        printf("done!\n");
+        //tempurature
+        printf("Saving tempurature...");
+        FILE* tempFile = fopen(TEMP_F, "w");
+        fwrite(&temp, sizeof(double), 1, tempFile);
+        fclose(tempFile);
+        printf("done!\n");
     }
+    /*
     if(argc < 2) //overwrite preexiting database file
     {
         int save = saveDatabase("database", database); 
@@ -215,7 +453,7 @@ int main(int argc, char* argv[])
             error("error saving the database!\n");
             printf("Error code: %d\n", save);
         }         
-    }
+    }*/
     disassemble(database);
     return 0;
 }
