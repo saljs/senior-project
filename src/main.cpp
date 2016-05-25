@@ -11,7 +11,11 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
+#include <ncurses.h>
+#include <time.h>
 #include "FANN/src/include/floatfann.h"
+#include <mpi.h>
+#include "p_database.h"
 
 #include <iostream>
 #include "opencv2/core/core.hpp"
@@ -64,10 +68,10 @@ int sendToRobot(const void* buffer, size_t bufferLength)
         error("ERROR connecting");
         return -1;
     }
-	n = write(sockfd, buffer, bufferLength);
+    n = write(sockfd, buffer, bufferLength);
     if (n < 0) 
     {
-        return -1;
+        return 1;
     }
     char returnBuf[255];
     bzero(returnBuf, 255);
@@ -91,12 +95,20 @@ int listenToRobot(int sockfd, void* buffer, size_t bufferLength)
 		error("ERROR on accept");
         return -1;
 	}
-	int n = read(sockfd, buffer, bufferLength);
-	if (n < 0)
-	{
-		error("ERROR reading from socket");
-        return -1;
-	}
+    void* ptr = buffer;
+    int n;
+    int totalRead  = 0;
+    while(totalRead < bufferLength)
+    {
+    	n = read(sockfd, ptr, bufferLength);
+    	if (n < 0)
+    	{
+    		error("ERROR reading from socket");
+            return -1;
+    	}
+        totalRead += n;
+        ptr += n;
+    }
 	char returnHead[] = "OK";
 	n = write(sockfd, returnHead, strlen(returnHead));
 	if (n < 0) 
@@ -108,33 +120,20 @@ int listenToRobot(int sockfd, void* buffer, size_t bufferLength)
 	return 0;
 }
 
-void visualizer(memory* database) //prints ascii representation of database
-{
-    memory* loop = database;
-    while(loop != NULL)
-    {
-        printf("|-mem:%d---------|\n|inputs:        |\n", loop->uuid);
-        for(int i = 0; i < NUMINPUTS; i++)
-        {
-            printf("|  input%d ", i);
-            input* inLoop = loop->inputs[i];
-            while(inLoop != NULL)
-            {
-                printf("[link:%d confidence:%f], ", inLoop->link, inLoop->confidence);
-                input* inTmp = inLoop->next;
-                inLoop = inTmp;
-            }
-            printf("\n");
-        }
-        printf("|---------------|\n   |\n   |\n   |\n");
-        memory* tmp = loop->next;
-        loop = tmp;
-    }
-    printf(" |----|\n |NULL|\n |----|\n");
-}
-
 int main(int argc, char* argv[])
 {
+	//init MPI
+	MPI_Init(NULL, NULL);
+    // Find out rank, size
+    int world_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    int world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    if(world_rank != 0)
+    {
+		p_compare();
+	}
+	
     //init the database
     memory* database;
     if(access(DATABASE_F, F_OK) == -1) 
@@ -204,9 +203,27 @@ int main(int argc, char* argv[])
     float lastCost = INFINITY;
     int lastWeight;
     fann_type lastVal;
+    //time for incremental database saves
+    time_t lastSave;
+    time(&lastSave);
+    
+    //init ncurses window stuff
+	WINDOW *display, *command;
+    initscr();
+    cbreak();
+    noecho();
+    nodelay(stdscr, TRUE);
+    display = newwin(LINES, COLS/2, 0, 0);
+    command = newwin(LINES, COLS/2, 0, COLS/2);
+    idlok(display, TRUE);
+    scrollok(display, TRUE);
+    idlok(command, TRUE);
+    scrollok(command, TRUE);
+    
     while(true) //wait for robot to connect
     {
-        printf("Waiting for robot to connect...");
+        wprintw(display, "Waiting for robot to connect...");
+        wrefresh(display);
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         short int connected;
         if(listenToRobot(newsockfd, &connected, sizeof(short int)) != 0)
@@ -219,50 +236,55 @@ int main(int argc, char* argv[])
             error("ERROR robot sent unrecognized connected signal");
             continue;
         }
-        printf("Robot connected!\n");
+        wprintw(display, "Robot connected!\n");
+        wrefresh(display);
         while(true) //main loop
         {	
+			//send ready signal
+			short int ready = 1;
+			if(sendToRobot(&ready, sizeof(short int)) != 0)
+			{
+				error("ERROR reaching robot");
+				continue;
+			}
+			wprintw(display, "Ready to communicate\n");
+            wrefresh(display);
             //get inputs from robot
-            input* newInputs[4];
+            input* newInputs[5];
             bool stopCond = false;
             for(int i = 0; i < 5; i++)
-            {
-	    		newInputs[i] = malloc(sizeof(input));
-	    		//ready to recieve data
-	    		short int ready = 1;
-	    		if(sendToRobot(&ready, sizeof(short int)) != 0)
-	    		{
-	    			error("ERROR comminicating with robot");
-                    stopCond = true;
-                    break;
-	    	    }
-	    	    //read input
+            {	
+	    	    //read input dataSize
+	    	    newInputs[i] = malloc(sizeof(input));
 	    	    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-                if(listenToRobot(newsockfd, newInputs[i], sizeof(input)) != 0)
+                if(listenToRobot(newsockfd, &newInputs[i]->dataSize, sizeof(size_t)) != 0)
                 {
                     error("ERROR robot is not responding");
                     stopCond = true;
                     break;
                 }
-              
-                void* tmp = malloc(newInputs[i]->dataSize);
-                //ready to recieve data
-	    		if(sendToRobot(&ready, sizeof(short int)) != 0)
-	    		{
-	    			error("ERROR comminicating with robot");
-                    stopCond = true;
-                    break;
-	    	    }
+				wprintw(display, "Recieved input %d size - %d\n", i, newInputs[i]->dataSize);
+                wrefresh(display);
+                newInputs[i]->data = malloc(newInputs[i]->dataSize);
 	    	    //read data
 	    	    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-                if(listenToRobot(newsockfd, tmp, newInputs[i]->dataSize) != 0)
+                if(listenToRobot(newsockfd, newInputs[i]->data, newInputs[i]->dataSize) != 0)
                 {
                     error("ERROR robot is not responding");
                     stopCond = true;
                     break;
                 }
-                newInputs[i]->data = tmp;
-                linkInput(newInputs[i], i, database);
+                wprintw(display, "Recieved input %d data\n", i);
+                wrefresh(display);
+                if(i == 0)
+                {
+					//use parallell implemtation for image inputs
+					p_linkInput(newInputs[i], i, database, world_size);
+				}
+				else
+				{
+					linkInput(newInputs[i], i, database);
+				}
 	    	}
             if(stopCond == true)
             {
@@ -270,7 +292,7 @@ int main(int argc, char* argv[])
             }
 	    	//feed data into the input neurons
             int i = 0;
-	    	for(; i < 5; i++)
+	    	for(; i < 4; i++)
             {
                 inputNeurons[i] = *(float *)newInputs[i+1]->data;
             }
@@ -302,7 +324,11 @@ int main(int argc, char* argv[])
                 }
             }
             disassemble(composite);
+            wprintw(display, "running data through neural net..\n");
+            wrefresh(display);
             calc_out = fann_run(ann, inputNeurons);
+            wprintw(display, "Output: %f %f\n", calc_out[0], calc_out[1]);
+            wrefresh(display);
             //translate output to instructions for the robot
             instructions netOutput;
             if(calc_out[0] < 1/3)
@@ -330,34 +356,14 @@ int main(int argc, char* argv[])
             {
                 netOutput.steering = 1;
             }
-            //listen for ready signal
-	    	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-	    	short int ready = 0;
-	    	if(listenToRobot(newsockfd, &ready, sizeof(short int)) != 0)
-	    	{
-				error("ERROR robot is not responding");
-                break;
-			}
-	    	//check if the server is indeed ready
-	    	if(ready != 1)
-	    	{
-	    		//something went terribly wrong.
-	    		error("ERROR something went terribly wrong");
-	    		exit(1);
-	    	}
+           
 	    	if(sendToRobot(&netOutput, sizeof(instructions)) != 0)
 	    	{
 	    		error("ERROR comminicating with robot");
                 break;
 	    	}
 	    	
-	    	//tell the robot we are ready to recive its score
-	    	ready = 1;
-	    	if(sendToRobot(&ready, sizeof(short int)) != 0)
-	    	{
-	    		error("ERROR comminicating with robot");
-                break;
-	    	}
+	    	//listen for score
 	    	float score;
 	    	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 	    	if(listenToRobot(newsockfd, &score, sizeof(float)) != 0)
@@ -365,7 +371,8 @@ int main(int argc, char* argv[])
                 error("ERROR robot is not responding");
                 break;
             }
-	    	
+	    	wprintw(display, "Score = %f\n", score);
+            wrefresh(display);
 	    	//add inputs to database, starting with score
 	    	input* scoreIn = malloc(sizeof(input));
 	    	scoreIn->data = malloc(sizeof(float));
@@ -412,48 +419,79 @@ int main(int argc, char* argv[])
             ann->weights[weight] = val;
             //decrease temperature
             temp = temp * ALPHA;
+            
+            //check if the database needs to be saved
+            if(difftime(time(NULL), lastSave) > 60)
+            {
+				wprintw(command, "Saving the database...");
+                wrefresh(command);
+                int save = saveDatabase(DATABASE_F, database); 
+                if(save != 0)
+                {
+                    error("error saving the database!\n");
+                    wprintw(command, "Error code: %d\n", save);
+                    wrefresh(command);
+                }
+                wprintw(command, "done!\n");
+                wrefresh(command);
+                //neural net
+                wprintw(command, "Saving neural net...");
+                wrefresh(command);
+                fann_save(ann, FANN_F);
+                wprintw(command, "done!\n");
+                wrefresh(command);
+                //tempurature
+                wprintw(command, "Saving tempurature...");
+                wrefresh(command);
+                FILE* tempFile = fopen(TEMP_F, "w");
+                fwrite(&temp, sizeof(double), 1, tempFile);
+                fclose(tempFile);
+                wprintw(command, "done!\n");
+                wrefresh(command);
+                time_t curtime;
+                time(&curtime);
+                struct tm *loctime = localtime(&curtime);
+                lastSave = curtime;
+                wprintw(command, "Database save completed at %s\n", asctime(loctime));
+                wrefresh(command);
+			}
+
         }
-        printf("Lost connection with robot\n");
+        wprintw(display, "Lost connection with robot\n");
+        wrefresh(display);
         //save all the importatnt junk
         //database
-        printf("Saving the database...");
+        wprintw(display, "Saving the database...");
+        wrefresh(display);
         int save = saveDatabase(DATABASE_F, database); 
         if(save != 0)
         {
             error("error saving the database!\n");
-            printf("Error code: %d\n", save);
+            wprintw(display, "Error code: %d\n", save);
+            wrefresh(display);
         }
-        printf("done!\n");
+        wprintw(display, "done!\n");
+        wrefresh(display);
         //neural net
-        printf("Saving neural net...");
+        wprintw(display, "Saving neural net...");
+        wrefresh(display);
         fann_save(ann, FANN_F);
-        printf("done!\n");
+        wprintw(display, "done!\n");
+        wrefresh(display);
         //tempurature
-        printf("Saving tempurature...");
+        wprintw(display, "Saving tempurature...");
+        wrefresh(display);
         FILE* tempFile = fopen(TEMP_F, "w");
         fwrite(&temp, sizeof(double), 1, tempFile);
         fclose(tempFile);
-        printf("done!\n");
+        wprintw(display, "done!\n");
+        wrefresh(display);
     }
-    /*
-    if(argc < 2) //overwrite preexiting database file
-    {
-        int save = saveDatabase("database", database); 
-        if(save != 0)
-        {
-            error("error saving the database!\n");
-            printf("Error code: %d\n", save);
-        }         
-    }
-    else //create new database file
-    {
-        int save = saveDatabase(argv[1], database);
-        if(save != 0)
-        {
-            error("error saving the database!\n");
-            printf("Error code: %d\n", save);
-        }         
-    }*/
+    delwin(display);
+    delwin(command);
+    endwin();
+    MPI_Finalize();
     disassemble(database);
+    close(sockfd);
     return 0;
 }

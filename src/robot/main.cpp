@@ -49,7 +49,7 @@ int sendToServer(const void* buffer, size_t bufferLength)
     {
         error("ERROR connecting");
     }
-	n = write(sockfd, buffer, bufferLength);
+    n = write(sockfd, buffer, bufferLength);
     if (n < 0) 
     {
         return 1;
@@ -68,18 +68,26 @@ int sendToServer(const void* buffer, size_t bufferLength)
 	}
 	return 0;
 }
-
 void listenToServer(int sockfd, void* buffer, size_t bufferLength)
 {
 	if (sockfd < 0)
 	{
 		error("ERROR on accept");
 	}
-	int n = read(sockfd, buffer, bufferLength);
-	if (n < 0)
-	{
-		error("ERROR reading from socket");
-	}
+	void* ptr = buffer;
+    int n;
+    int totalRead  = 0;
+    while(totalRead < bufferLength)
+    {
+    	n = read(sockfd, ptr, bufferLength);
+    	if (n < 0)
+    	{
+    		error("ERROR reading from socket");
+            return -1;
+    	}
+        totalRead += n;
+        ptr += n;
+    }
 	char returnHead[] = "OK";
 	n = write(sockfd, returnHead, strlen(returnHead));
 	if (n < 0) 
@@ -127,6 +135,7 @@ int setupHardware()
     pinMode(TRIG1, OUTPUT);
     pinMode(ECHO1, INPUT);
     startCapture();
+    delay(1000); //give the camera time to start up
     return 0;
 }
         
@@ -170,41 +179,33 @@ int main(int argc, char** argv)
 
     while(true) //main loop
     {   
+		//listen for ready signal
+		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		digitalWrite(STATUS_LED, 1);
+		short int ready = 0;
+		listenToServer(newsockfd, &ready, sizeof(short int));
+		//check if the server is indeed ready
+		if(ready != 1)
+		{
+		    error("ERROR something went terribly wrong");	
+		} 
+		digitalWrite(STATUS_LED, 0);
         //send inputs to server
         memory* dummy = newMemory(NULL);
         input* newInput;
         for(int i = 0; i < 5; i++)
         {
+			digitalWrite(STATUS_LED, 1);
 			newInput = getInput(i, dummy);
-			//listen for ready signal
-			newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-			digitalWrite(STATUS_LED, 1);
-			short int ready = 0;
-			listenToServer(newsockfd, &ready, sizeof(short int));
-			//check if the server is indeed ready
-			if(ready != 1)
-			{
-			    error("ERROR something went terribly wrong");	
-			}   
-			if(sendToServer(newInput, sizeof(input)) != 0)
+			unsigned long long int longSize = newInput->dataSize;
+			if(sendToServer(&longSize, sizeof(unsigned long long int)) != 0) //size_t is defined as this on x86_64
 			{
 				error("ERROR sending to server");
 			}
-			digitalWrite(STATUS_LED, 0);
-			//listen for ready signal
-			newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-			digitalWrite(STATUS_LED, 1);
-			ready = 0;
-			listenToServer(newsockfd, &ready, sizeof(short int));
-			//check if the server is indeed ready
-			if(ready != 1)
-			{
-				error("ERROR something went terribly wrong");
-			} 
-			if(sendToServer(newInput->data, newInput->dataSize) != 0)
-			{
-				error("ERROR sending to server");
-			}
+		    if(sendToServer(newInput->data, newInput->dataSize) != 0)
+		    {
+		    	error("ERROR sending to server");
+		    }
             digitalWrite(STATUS_LED, 0);
 		}
 		free(newInput->data);
@@ -214,11 +215,6 @@ int main(int argc, char** argv)
         //listen for instructions
         instructions serverInput;
         bzero(&serverInput,sizeof(instructions));
-        short int ready = 1;
-        if(sendToServer(&ready, sizeof(short int)) != 0)
-		{
-			error("ERROR comminicating with server");
-		}
 		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         digitalWrite(STATUS_LED, 1);
         listenToServer(newsockfd, &serverInput, sizeof(instructions));
@@ -281,6 +277,7 @@ int main(int argc, char** argv)
         //calculate new score
         //subtract points for hitting stuff
         //add points for direct light 
+
         float Lval = (float)analogRead(SOLAR_T) / 1024.0;
         score += Lval - lastLval;
         if(score < 0)
@@ -292,18 +289,7 @@ int main(int argc, char** argv)
             score = 1;
         }
         lastLval = Lval;
-        //listen for ready signal
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-		digitalWrite(STATUS_LED, 1);
-		ready = 0;
-		listenToServer(newsockfd, &ready, sizeof(short int));
-		//check if the server is indeed ready
-		if(ready != 1)
-		{
-			//server is telling us to exit cleanly.
-			printf("exiting...\n");
-			break;
-		}
+
         if(sendToServer(&score, sizeof(float)) != 0)
         {
             error("ERROR sending to server");

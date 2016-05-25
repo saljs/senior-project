@@ -1,0 +1,10 @@
+Senior project log for 2016-05-25_14-56
+Time logged: 35
+Got the code all done! The MPI stuff was a lot harder than I thought, but my
+cluster processes images a lot faster now that I have it working. Probably
+because there's now 24 CPUs plugging away at it instead of one. The only
+remaining bug is that it takes a very long time to process very dark images,
+which isn't really a bug just an optimazation problem. I initialized the
+neural net with some sane defaults for obstical avoidance and light seeking,
+the robot mostlyt goes left. I mean, most problems can be caused by turning
+left so it's not like it doesn't work. 

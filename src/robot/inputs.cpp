@@ -50,14 +50,16 @@ input* getInput(int type, memory* database)
     {
         input* newInput = (input*)malloc(sizeof(input));
         Mat image = cameraFrame;
-        newInput->data = malloc(sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols);
+        newInput->data = malloc(sizeof(int)*3 + sizeof(unsigned long long int) + image.elemSize()*image.rows*image.cols);
         int ImgType = image.type();
         memmove(newInput->data, &image.rows, sizeof(int));
         memmove(newInput->data+sizeof(int), &image.cols, sizeof(int));
         memmove(newInput->data+sizeof(int)*2, &ImgType, sizeof(int));
-        memmove(newInput->data+sizeof(int)*3, image.step.p, sizeof(size_t));
-        memmove(newInput->data+sizeof(int)*3 + sizeof(size_t), image.data, image.elemSize()*image.rows*image.cols);
-        newInput->dataSize = sizeof(int)*3 + sizeof(size_t) + image.elemSize()*image.rows*image.cols;
+        //force 8 bit size_t
+        unsigned long long int step = *image.step.p;
+        memmove(newInput->data+sizeof(int)*3, &step, sizeof(unsigned long long int));
+        memmove(newInput->data+sizeof(int)*3 + sizeof(unsigned long long int), image.data, image.elemSize()*image.rows*image.cols);
+        newInput->dataSize = sizeof(int)*3 + sizeof(unsigned long long int) + image.elemSize()*image.rows*image.cols;
         linkInput(newInput, type, database);
         return newInput;
     }
