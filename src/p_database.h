@@ -1,5 +1,5 @@
 /* p_database.h
- * This file is a parrelell version of 
+ * This file is a parrelell version of
  * database.c
  */
 

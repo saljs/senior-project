@@ -1,5 +1,5 @@
 /* database.h
- * This file contains the different datatypes and 
+ * This file contains the different datatypes and
  * function declarations for the library.
  * Descriptions of the functions are in database.c.
  */

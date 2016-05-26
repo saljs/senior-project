@@ -153,17 +153,17 @@ memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
     }
     else //split the input into a new memory
     {
-       if(newTrigger != NULL)
-       {
-           *newTrigger = true;
-       }
-       memory* newStart = newMemory(database);
-       if(newStart == NULL)
-       {
-           return NULL;
-       }
-       addInput(newStart, newInput, index);
-       updated = newStart;
+        if(newTrigger != NULL)
+        {
+            *newTrigger = true;
+        }
+        memory* newStart = newMemory(database);
+        if(newStart == NULL)
+        {
+            return NULL;
+        }
+        addInput(newStart, newInput, index);
+        updated = newStart;
     }
     return updated;
 }
@@ -209,7 +209,7 @@ void compileMem(input* pattern, memory* dataset, memory** list, int levels)
     for(int i = 0; i < NUMINPUTS; i++) //iterate over all inputs in the memory
     {
         input* parser = loop->inputs[i];
-        while(parser != NULL) 
+        while(parser != NULL)
         {
             compileMem(parser, loop, list, levels-1); //recurse until levels reaches 0
             input* tmp = parser->next;

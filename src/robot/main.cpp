@@ -33,11 +33,11 @@ int sendToServer(const void* buffer, size_t bufferLength)
     struct hostent *server;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
-    { 
+    {
         error("ERROR opening socket");
     }
     server = gethostbyname(SERVER);
-    if(server == NULL) 
+    if(server == NULL)
     {
         error("ERROR, no such host");
     }
@@ -45,12 +45,12 @@ int sendToServer(const void* buffer, size_t bufferLength)
     serv_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(SEND_PORT);
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
     {
         error("ERROR connecting");
     }
     n = write(sockfd, buffer, bufferLength);
-    if (n < 0) 
+    if (n < 0)
     {
         return 1;
     }
@@ -64,38 +64,38 @@ int sendToServer(const void* buffer, size_t bufferLength)
     close(sockfd);
     if(strncmp(returnBuf, "OK", 2) != 0)
     {
-		return -2;
-	}
-	return 0;
+        return -2;
+    }
+    return 0;
 }
 void listenToServer(int sockfd, void* buffer, size_t bufferLength)
 {
-	if (sockfd < 0)
-	{
-		error("ERROR on accept");
-	}
-	void* ptr = buffer;
+    if (sockfd < 0)
+    {
+        error("ERROR on accept");
+    }
+    void* ptr = buffer;
     int n;
     int totalRead  = 0;
     while(totalRead < bufferLength)
     {
-    	n = read(sockfd, ptr, bufferLength);
-    	if (n < 0)
-    	{
-    		error("ERROR reading from socket");
+        n = read(sockfd, ptr, bufferLength);
+        if (n < 0)
+        {
+            error("ERROR reading from socket");
             return -1;
-    	}
+        }
         totalRead += n;
         ptr += n;
     }
-	char returnHead[] = "OK";
-	n = write(sockfd, returnHead, strlen(returnHead));
-	if (n < 0) 
-	{
-		error("ERROR writing to socket");
-	}
-	close(sockfd);
-	return;
+    char returnHead[] = "OK";
+    n = write(sockfd, returnHead, strlen(returnHead));
+    if (n < 0)
+    {
+        error("ERROR writing to socket");
+    }
+    close(sockfd);
+    return;
 }
 
 float getDistance(int trig, int echo)
@@ -138,7 +138,7 @@ int setupHardware()
     delay(1000); //give the camera time to start up
     return 0;
 }
-        
+
 int main(int argc, char** argv)
 {
     //init hardware
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     {
         error("error setting up hardware");
     }
-    //init listener socket 
+    //init listener socket
     int sockfd, newsockfd;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -178,44 +178,44 @@ int main(int argc, char** argv)
     }
 
     while(true) //main loop
-    {   
-		//listen for ready signal
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-		digitalWrite(STATUS_LED, 1);
-		short int ready = 0;
-		listenToServer(newsockfd, &ready, sizeof(short int));
-		//check if the server is indeed ready
-		if(ready != 1)
-		{
-		    error("ERROR something went terribly wrong");	
-		} 
-		digitalWrite(STATUS_LED, 0);
+    {
+        //listen for ready signal
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        digitalWrite(STATUS_LED, 1);
+        short int ready = 0;
+        listenToServer(newsockfd, &ready, sizeof(short int));
+        //check if the server is indeed ready
+        if(ready != 1)
+        {
+            error("ERROR something went terribly wrong");
+        }
+        digitalWrite(STATUS_LED, 0);
         //send inputs to server
         memory* dummy = newMemory(NULL);
         input* newInput;
         for(int i = 0; i < 5; i++)
         {
-			digitalWrite(STATUS_LED, 1);
-			newInput = getInput(i, dummy);
-			unsigned long long int longSize = newInput->dataSize;
-			if(sendToServer(&longSize, sizeof(unsigned long long int)) != 0) //size_t is defined as this on x86_64
-			{
-				error("ERROR sending to server");
-			}
-		    if(sendToServer(newInput->data, newInput->dataSize) != 0)
-		    {
-		    	error("ERROR sending to server");
-		    }
+            digitalWrite(STATUS_LED, 1);
+            newInput = getInput(i, dummy);
+            unsigned long long int longSize = newInput->dataSize;
+            if(sendToServer(&longSize, sizeof(unsigned long long int)) != 0) //size_t is defined as this on x86_64
+            {
+                error("ERROR sending to server");
+            }
+            if(sendToServer(newInput->data, newInput->dataSize) != 0)
+            {
+                error("ERROR sending to server");
+            }
             digitalWrite(STATUS_LED, 0);
-		}
-		free(newInput->data);
+        }
+        free(newInput->data);
         free(newInput);
         disassemble(dummy);
 
         //listen for instructions
         instructions serverInput;
         bzero(&serverInput,sizeof(instructions));
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         digitalWrite(STATUS_LED, 1);
         listenToServer(newsockfd, &serverInput, sizeof(instructions));
         digitalWrite(STATUS_LED, 0);
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
             delay(TURN_DUR);
             digitalWrite(MOTORS, 0);
         }
-        
+
         float score = 0.5;
         if(getDistance(TRIG, ECHO) < 7)
         {
@@ -273,10 +273,10 @@ int main(int argc, char** argv)
             delay(DRIVE_DUR);
             digitalWrite(MOTORS, 0);
         }
-        
+
         //calculate new score
         //subtract points for hitting stuff
-        //add points for direct light 
+        //add points for direct light
 
         float Lval = (float)analogRead(SOLAR_T) / 1024.0;
         score += Lval - lastLval;
@@ -294,7 +294,7 @@ int main(int argc, char** argv)
         {
             error("ERROR sending to server");
         }
-	}
+    }
     stopCapture();
     close(sockfd);
     return 0;

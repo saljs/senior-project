@@ -1,7 +1,7 @@
 /* inputs.h
- * This file should not be modified. Make changes to the actual 
+ * This file should not be modified. Make changes to the actual
  * functions in inputs.c, that  way the function declarations
- * and usage will remain constant across implementations. 
+ * and usage will remain constant across implementations.
 */
 #include "database.h"
 

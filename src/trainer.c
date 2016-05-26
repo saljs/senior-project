@@ -4,27 +4,27 @@
 #include "vars.h"
 
 int FANN_API test_callback(struct fann *ann, struct fann_train_data *train,
-        unsigned int max_epochs, unsigned int epochs_between_reports, 
-        float desired_error, unsigned int epochs)
+                           unsigned int max_epochs, unsigned int epochs_between_reports,
+                           float desired_error, unsigned int epochs)
 {
-        printf("Epochs     %8d. MSE: %.5f. Desired-MSE: %.5f\n", epochs, fann_get_MSE(ann), desired_error);
-        return 0;
+    printf("Epochs     %8d. MSE: %.5f. Desired-MSE: %.5f\n", epochs, fann_get_MSE(ann), desired_error);
+    return 0;
 }
 
 int main()
 {
-	const float desired_error = (const float) 0.001;
+    const float desired_error = (const float) 0.001;
     const unsigned int max_epochs = 500000;
     const unsigned int epochs_between_reports = 1000;
-	fann_type *calc_out;
-	struct fann *ann ;
-	struct fann_train_data *data;
-	unsigned int i = 0;
-	
-	printf("Creating network.\n");
-	ann = fann_create_standard(LAYERS, 4+((NUMINPUTS-1) * DBINPUTS), HIDDEN, 2);
-	
-	data = fann_read_train_from_file("robottrain.data");
+    fann_type *calc_out;
+    struct fann *ann ;
+    struct fann_train_data *data;
+    unsigned int i = 0;
+
+    printf("Creating network.\n");
+    ann = fann_create_standard(LAYERS, 4+((NUMINPUTS-1) * DBINPUTS), HIDDEN, 2);
+
+    data = fann_read_train_from_file("robottrain.data");
 
     fann_set_activation_steepness_hidden(ann, 1);
     fann_set_activation_steepness_output(ann, 1);
@@ -44,10 +44,10 @@ int main()
 
     for(i = 0; i < fann_length_train_data(data); i++)
     {
-            calc_out = fann_run(ann, data->input[i]);
-            printf("XOR test (%f,%f) -> %f, should be %f, difference=%f\n",
-                       data->input[i][0], data->input[i][1], calc_out[0], data->output[i][0],
-                       fann_abs(calc_out[0] - data->output[i][0]));
+        calc_out = fann_run(ann, data->input[i]);
+        printf("XOR test (%f,%f) -> %f, should be %f, difference=%f\n",
+               data->input[i][0], data->input[i][1], calc_out[0], data->output[i][0],
+               fann_abs(calc_out[0] - data->output[i][0]));
     }
 
     printf("Saving network.\n");

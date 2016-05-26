@@ -26,20 +26,20 @@ void p_compare()
         MPI_Datatype inputBuffer;
         MPI_Type_contiguous((int)sizeof(input), MPI_BYTE, &inputBuffer);
         MPI_Type_commit(&inputBuffer);
-        
+
         MPI_Recv(input1, 1, inputBuffer, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    
+
         input1->data = malloc(input1->dataSize);
         MPI_Recv(input1->data, (int)input1->dataSize, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        
+
         MPI_Recv(input2, 1, inputBuffer, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    
+
         input2->data = malloc(input2->dataSize);
         MPI_Recv(input2->data, (int)input2->dataSize, MPI_BYTE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    
+
         int type;
         MPI_Recv(&type, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    
+
         float similarity = compareInputs(input1, input2, type);
         MPI_Send(&similarity, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
         free(input1->data);
@@ -48,11 +48,11 @@ void p_compare()
         free(input2);
     }
 }
-    
-    
-    
+
+
+
 void p_linkInput(input* pattern, int type, memory* database, int world_size)
-{   
+{
     MPI_Datatype inputBuffer;
     MPI_Type_contiguous((int)sizeof(input), MPI_BYTE, &inputBuffer);
     MPI_Type_commit(&inputBuffer);
@@ -72,7 +72,7 @@ void p_linkInput(input* pattern, int type, memory* database, int world_size)
         float matchprob = 0;
         //select a batch of world_size inputs
         input* currInput = next->inputs[type];
-        
+
         input* tmpSim;
         while(currInput != NULL)
         {
@@ -121,7 +121,7 @@ void p_linkInput(input* pattern, int type, memory* database, int world_size)
         }
         lastCost = cost;
         steps++;
-        
+
         cost = steps / (matchprob + 1); //calculate algorithm cost
         if(matchprob > BRANCH_LIMIT && index == 1) //if the current memory is more similar than the BRANCH_LIMIT, go to the linked memory instead of iterating linearly
         {

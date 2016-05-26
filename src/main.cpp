@@ -49,12 +49,12 @@ int sendToRobot(const void* buffer, size_t bufferLength)
     struct hostent *server;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
-    { 
+    {
         error("ERROR opening socket");
         return -1;
     }
     server = gethostbyname(ROBOT);
-    if(server == NULL) 
+    if(server == NULL)
     {
         error("ERROR, no such host");
         return -1;
@@ -63,13 +63,13 @@ int sendToRobot(const void* buffer, size_t bufferLength)
     serv_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(SEND_PORT);
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
     {
         error("ERROR connecting");
         return -1;
     }
     n = write(sockfd, buffer, bufferLength);
-    if (n < 0) 
+    if (n < 0)
     {
         return 1;
     }
@@ -83,47 +83,47 @@ int sendToRobot(const void* buffer, size_t bufferLength)
     close(sockfd);
     if(strncmp(returnBuf, "OK", 2) != 0)
     {
-		return -1;
-	}
-	return 0;
+        return -1;
+    }
+    return 0;
 }
 
 int listenToRobot(int sockfd, void* buffer, size_t bufferLength)
 {
-	if (sockfd < 0)
-	{
-		error("ERROR on accept");
+    if (sockfd < 0)
+    {
+        error("ERROR on accept");
         return -1;
-	}
+    }
     void* ptr = buffer;
     int n;
     int totalRead  = 0;
     while(totalRead < bufferLength)
     {
-    	n = read(sockfd, ptr, bufferLength);
-    	if (n < 0)
-    	{
-    		error("ERROR reading from socket");
+        n = read(sockfd, ptr, bufferLength);
+        if (n < 0)
+        {
+            error("ERROR reading from socket");
             return -1;
-    	}
+        }
         totalRead += n;
         ptr += n;
     }
-	char returnHead[] = "OK";
-	n = write(sockfd, returnHead, strlen(returnHead));
-	if (n < 0) 
-	{
-		error("ERROR writing to socket");
+    char returnHead[] = "OK";
+    n = write(sockfd, returnHead, strlen(returnHead));
+    if (n < 0)
+    {
+        error("ERROR writing to socket");
         return -1;
-	}
-	close(sockfd);
-	return 0;
+    }
+    close(sockfd);
+    return 0;
 }
 
 int main(int argc, char* argv[])
 {
-	//init MPI
-	MPI_Init(NULL, NULL);
+    //init MPI
+    MPI_Init(NULL, NULL);
     // Find out rank, size
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
@@ -131,12 +131,12 @@ int main(int argc, char* argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     if(world_rank != 0)
     {
-		p_compare();
-	}
-	
+        p_compare();
+    }
+
     //init the database
     memory* database;
-    if(access(DATABASE_F, F_OK) == -1) 
+    if(access(DATABASE_F, F_OK) == -1)
     {
         database = newMemory(NULL);
     }
@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
     {
         ann = fann_create_from_file(FANN_F);
     }
-    
+
     fann_type *calc_out;
     fann_type inputNeurons[4+((NUMINPUTS-1)*DBINPUTS)];
     //read tempurature from file if it exists
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
         fclose(tempFile);
     }
 
-    //init listener socket 
+    //init listener socket
     int sockfd, newsockfd;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
@@ -196,9 +196,9 @@ int main(int argc, char* argv[])
     }
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
-    
+
     //init the rng
-    srandom(time(NULL));    
+    srandom(time(NULL));
     //define some variables for the annealing algorithm
     float lastCost = INFINITY;
     int lastWeight;
@@ -206,9 +206,9 @@ int main(int argc, char* argv[])
     //time for incremental database saves
     time_t lastSave;
     time(&lastSave);
-    
+
     //init ncurses window stuff
-	WINDOW *display, *command;
+    WINDOW *display, *command;
     initscr();
     cbreak();
     noecho();
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
     scrollok(display, TRUE);
     idlok(command, TRUE);
     scrollok(command, TRUE);
-    
+
     while(true) //wait for robot to connect
     {
         wprintw(display, "Waiting for robot to connect...");
@@ -239,35 +239,35 @@ int main(int argc, char* argv[])
         wprintw(display, "Robot connected!\n");
         wrefresh(display);
         while(true) //main loop
-        {	
-			//send ready signal
-			short int ready = 1;
-			if(sendToRobot(&ready, sizeof(short int)) != 0)
-			{
-				error("ERROR reaching robot");
-				continue;
-			}
-			wprintw(display, "Ready to communicate\n");
+        {
+            //send ready signal
+            short int ready = 1;
+            if(sendToRobot(&ready, sizeof(short int)) != 0)
+            {
+                error("ERROR reaching robot");
+                continue;
+            }
+            wprintw(display, "Ready to communicate\n");
             wrefresh(display);
             //get inputs from robot
             input* newInputs[5];
             bool stopCond = false;
             for(int i = 0; i < 5; i++)
-            {	
-	    	    //read input dataSize
-	    	    newInputs[i] = malloc(sizeof(input));
-	    	    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+            {
+                //read input dataSize
+                newInputs[i] = malloc(sizeof(input));
+                newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
                 if(listenToRobot(newsockfd, &newInputs[i]->dataSize, sizeof(size_t)) != 0)
                 {
                     error("ERROR robot is not responding");
                     stopCond = true;
                     break;
                 }
-				wprintw(display, "Recieved input %d size - %d\n", i, newInputs[i]->dataSize);
+                wprintw(display, "Recieved input %d size - %d\n", i, newInputs[i]->dataSize);
                 wrefresh(display);
                 newInputs[i]->data = malloc(newInputs[i]->dataSize);
-	    	    //read data
-	    	    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+                //read data
+                newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
                 if(listenToRobot(newsockfd, newInputs[i]->data, newInputs[i]->dataSize) != 0)
                 {
                     error("ERROR robot is not responding");
@@ -278,21 +278,21 @@ int main(int argc, char* argv[])
                 wrefresh(display);
                 if(i == 0)
                 {
-					//use parallell implemtation for image inputs
-					p_linkInput(newInputs[i], i, database, world_size);
-				}
-				else
-				{
-					linkInput(newInputs[i], i, database);
-				}
-	    	}
+                    //use parallell implemtation for image inputs
+                    p_linkInput(newInputs[i], i, database, world_size);
+                }
+                else
+                {
+                    linkInput(newInputs[i], i, database);
+                }
+            }
             if(stopCond == true)
             {
                 break;
             }
-	    	//feed data into the input neurons
+            //feed data into the input neurons
             int i = 0;
-	    	for(; i < 4; i++)
+            for(; i < 4; i++)
             {
                 inputNeurons[i] = *(float *)newInputs[i+1]->data;
             }
@@ -356,26 +356,26 @@ int main(int argc, char* argv[])
             {
                 netOutput.steering = 1;
             }
-           
-	    	if(sendToRobot(&netOutput, sizeof(instructions)) != 0)
-	    	{
-	    		error("ERROR comminicating with robot");
+
+            if(sendToRobot(&netOutput, sizeof(instructions)) != 0)
+            {
+                error("ERROR comminicating with robot");
                 break;
-	    	}
-	    	
-	    	//listen for score
-	    	float score;
-	    	newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-	    	if(listenToRobot(newsockfd, &score, sizeof(float)) != 0)
+            }
+
+            //listen for score
+            float score;
+            newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+            if(listenToRobot(newsockfd, &score, sizeof(float)) != 0)
             {
                 error("ERROR robot is not responding");
                 break;
             }
-	    	wprintw(display, "Score = %f\n", score);
+            wprintw(display, "Score = %f\n", score);
             wrefresh(display);
-	    	//add inputs to database, starting with score
-	    	input* scoreIn = malloc(sizeof(input));
-	    	scoreIn->data = malloc(sizeof(float));
+            //add inputs to database, starting with score
+            input* scoreIn = malloc(sizeof(input));
+            scoreIn->data = malloc(sizeof(float));
             *(float *)scoreIn->data = score;
             scoreIn->dataSize = sizeof(float);
             linkInput(scoreIn, NUMINPUTS-1, database);
@@ -419,13 +419,13 @@ int main(int argc, char* argv[])
             ann->weights[weight] = val;
             //decrease temperature
             temp = temp * ALPHA;
-            
+
             //check if the database needs to be saved
             if(difftime(time(NULL), lastSave) > 60)
             {
-				wprintw(command, "Saving the database...");
+                wprintw(command, "Saving the database...");
                 wrefresh(command);
-                int save = saveDatabase(DATABASE_F, database); 
+                int save = saveDatabase(DATABASE_F, database);
                 if(save != 0)
                 {
                     error("error saving the database!\n");
@@ -454,7 +454,7 @@ int main(int argc, char* argv[])
                 lastSave = curtime;
                 wprintw(command, "Database save completed at %s\n", asctime(loctime));
                 wrefresh(command);
-			}
+            }
 
         }
         wprintw(display, "Lost connection with robot\n");
@@ -463,7 +463,7 @@ int main(int argc, char* argv[])
         //database
         wprintw(display, "Saving the database...");
         wrefresh(display);
-        int save = saveDatabase(DATABASE_F, database); 
+        int save = saveDatabase(DATABASE_F, database);
         if(save != 0)
         {
             error("error saving the database!\n");

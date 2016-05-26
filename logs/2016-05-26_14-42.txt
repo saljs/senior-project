@@ -1,0 +1,5 @@
+Senior project log for 2016-05-26_14-42
+Time logged:4
+Ran robot some more to fill its database to about 2GB. Made a pretty nifty
+powerpoint for tonight.
+

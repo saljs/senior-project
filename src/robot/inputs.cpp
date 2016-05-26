@@ -110,7 +110,7 @@ input* getInput(int type, memory* database)
         linkInput(newInput, type, database);
         return newInput;
     }
-    //inpu #5 will be added maunally by the server 
+    //inpu #5 will be added maunally by the server
     return NULL;
 }
 
@@ -139,7 +139,7 @@ float compareInputs(input* input1, input* input2, int type)
         memmove(&step, input2->data+sizeof(int)*3, sizeof(size_t));
         memmove(data2, input2->data+sizeof(int)*3+sizeof(size_t), input2->dataSize - sizeof(int)*3+sizeof(size_t));
         Mat img_2(rows, cols, type, data2, step);
-        
+
         //calculate similarity using FLANN matching
         if(!img_1.data || !img_2.data)
         {
@@ -162,39 +162,39 @@ float compareInputs(input* input1, input* input2, int type)
         }
         else
         {
-             FlannBasedMatcher matcher;
-             std::vector< DMatch > matches;
-             matcher.match(descriptors_1, descriptors_2, matches);
-             double max_dist = 0, min_dist = 100;
-             for( int i = 0; i < descriptors_1.rows; i++ )
-             { 
-                 double dist = matches[i].distance;
-                 if( dist < min_dist ) 
-                 {
-                     min_dist = dist;
-                 }
-                 if( dist > max_dist ) 
-                 {
-                     max_dist = dist;
-                 }
-             }
-             std::vector< DMatch > good_matches;
-             for( int i = 0; i < descriptors_1.rows; i++ )
-             { 
-                 if( matches[i].distance <= max(2*min_dist, 0.02) )
-                 { 
-                     good_matches.push_back( matches[i]); 
-                 }
-             }
-             double TotalDist = 0.0;
-             for( int i = 0; i < (int)good_matches.size(); i++ )
-             {
-                 TotalDist += good_matches[i].distance;
-             }
-             double avgdist = TotalDist / (int)good_matches.size();
-             FLANNtest = 1 - avgdist;
+            FlannBasedMatcher matcher;
+            std::vector< DMatch > matches;
+            matcher.match(descriptors_1, descriptors_2, matches);
+            double max_dist = 0, min_dist = 100;
+            for( int i = 0; i < descriptors_1.rows; i++ )
+            {
+                double dist = matches[i].distance;
+                if( dist < min_dist )
+                {
+                    min_dist = dist;
+                }
+                if( dist > max_dist )
+                {
+                    max_dist = dist;
+                }
+            }
+            std::vector< DMatch > good_matches;
+            for( int i = 0; i < descriptors_1.rows; i++ )
+            {
+                if( matches[i].distance <= max(2*min_dist, 0.02) )
+                {
+                    good_matches.push_back( matches[i]);
+                }
+            }
+            double TotalDist = 0.0;
+            for( int i = 0; i < (int)good_matches.size(); i++ )
+            {
+                TotalDist += good_matches[i].distance;
+            }
+            double avgdist = TotalDist / (int)good_matches.size();
+            FLANNtest = 1 - avgdist;
         }
-        
+
         //calculate similarity using histograms
         Mat hsv_1, hsv_2;
         cvtColor(img_1, hsv_1, COLOR_BGR2HSV);
@@ -210,7 +210,7 @@ float compareInputs(input* input1, input* input2, int type)
         calcHist(&hsv_2, 1, channels, Mat(), hist_2, 2, histSize, ranges, true, false);
         normalize(hist_2, hist_2, 0, 1, NORM_MINMAX, -1, Mat());
         double HISTtest = 1 - compareHist(hist_1, hist_2, 3);
-        
+
         //average the results
         similarity = (FLANNtest + HISTtest)/2;
         free(data1);
