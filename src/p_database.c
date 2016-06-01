@@ -53,6 +53,11 @@ void p_compare()
 
 void p_linkInput(input* pattern, int type, memory* database, int world_size)
 {
+    if(world_size < 2) //need more than 1 host
+    {
+        linkInput(pattern, type, database);
+        return;
+    }
     MPI_Datatype inputBuffer;
     MPI_Type_contiguous((int)sizeof(input), MPI_BYTE, &inputBuffer);
     MPI_Type_commit(&inputBuffer);
@@ -183,45 +188,3 @@ void p_linkInput(input* pattern, int type, memory* database, int world_size)
     return;
 }
 
-
-/*
-memory* p_AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
-{
-    int count = 0;
-    float mean = 0.0, sum = 0.0;
-    input* next = database->inputs[index];
-    while(next != NULL)
-    {
-        sum += compareInputs(newInput, next, index);
-        count++;
-        input* tmp = next->next;
-        next = tmp;
-    }
-    mean = sum / count; //calculate mean similarity to the inputs currently in the memory
-    memory* updated;
-    if(mean > SPLIT_LIMIT || isnan(mean)) //append the input to current memory
-    {
-        if(newTrigger != NULL)
-        {
-            *newTrigger = false;
-        }
-        addInput(database, newInput, index);
-        updated = database;
-    }
-    else //split the input into a new memory
-    {
-       if(newTrigger != NULL)
-       {
-           *newTrigger = true;
-       }
-       memory* newStart = newMemory(database);
-       if(newStart == NULL)
-       {
-           return NULL;
-       }
-       addInput(newStart, newInput, index);
-       updated = newStart;
-    }
-    return updated;
-}
-*/
