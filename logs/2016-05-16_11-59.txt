@@ -1,0 +1,4 @@
+Senior project log for 2016-05-16_11-59
+Time logged: 5
+Set up disk images for the cluster, and got the head node configured in a VM
+so I can just clone it over.

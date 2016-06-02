@@ -1,0 +1,5 @@
+Senior project log for 2016-05-18_08-27
+Time logged: 12
+Finished building cluster (yay) and compiled robot client code. Started on the
+server side code, should have that done pretty soon. I opted for a smaller net
+to speed up learning.

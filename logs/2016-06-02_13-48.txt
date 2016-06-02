@@ -1,0 +1,5 @@
+Senior project log for 2016-06-02_13-48
+Time logged: 6
+Wrote final paper, gave it to someone else to look over for grammar stuff.
+Also spellchecked all the comments in my code so it doesn't look all stupid
+(it did). 
