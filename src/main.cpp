@@ -36,7 +36,7 @@ void error(const char* message)
     fprintf(stderr, "%s - %s\n", message, strerror(errno));
 }
 
-typedef struct instructions   //instructrions for robot from neural net
+typedef struct instructions   //instructions for robot from neural net
 {
     short int direction;
     short int  steering;
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
     fann_type *calc_out;
     fann_type inputNeurons[4+((NUMINPUTS-1)*DBINPUTS)];
-    //read tempurature from file if it exists
+    //read temperature from file if it exists
     double temp = 1.0;
     if(access(TEMP_F, F_OK) != -1)
     {
@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
         short int connected;
         if(listenToRobot(newsockfd, &connected, sizeof(short int)) != 0)
         {
-            error("ERROR comminicating with robot");
+            error("ERROR communicating with robot");
             continue;
         }
         if(connected != 1)
@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
                     stopCond = true;
                     break;
                 }
-                wprintw(display, "Recieved input %d size - %d\n", i, newInputs[i]->dataSize);
+                wprintw(display, "Received input %d size - %d\n", i, newInputs[i]->dataSize);
                 wrefresh(display);
                 newInputs[i]->data = malloc(newInputs[i]->dataSize);
                 //read data
@@ -274,11 +274,11 @@ int main(int argc, char* argv[])
                     stopCond = true;
                     break;
                 }
-                wprintw(display, "Recieved input %d data\n", i);
+                wprintw(display, "Received input %d data\n", i);
                 wrefresh(display);
                 if(i == 0)
                 {
-                    //use parallell implemtation for image inputs
+                    //use parallel implantation for image inputs
                     p_linkInput(newInputs[i], i, database, world_size);
                 }
                 else
@@ -359,7 +359,7 @@ int main(int argc, char* argv[])
 
             if(sendToRobot(&netOutput, sizeof(instructions)) != 0)
             {
-                error("ERROR comminicating with robot");
+                error("ERROR communicating with robot");
                 break;
             }
 
@@ -399,7 +399,6 @@ int main(int argc, char* argv[])
             }
             else
             {
-
                 //try new solution
                 weight = random() % ann->total_connections;
                 val = ann->weights[weight];
@@ -440,8 +439,8 @@ int main(int argc, char* argv[])
                 fann_save(ann, FANN_F);
                 wprintw(command, "done!\n");
                 wrefresh(command);
-                //tempurature
-                wprintw(command, "Saving tempurature...");
+                //temperature
+                wprintw(command, "Saving temperature...");
                 wrefresh(command);
                 FILE* tempFile = fopen(TEMP_F, "w");
                 fwrite(&temp, sizeof(double), 1, tempFile);
@@ -459,7 +458,7 @@ int main(int argc, char* argv[])
         }
         wprintw(display, "Lost connection with robot\n");
         wrefresh(display);
-        //save all the importatnt junk
+        //save all the important junk
         //database
         wprintw(display, "Saving the database...");
         wrefresh(display);
@@ -478,8 +477,8 @@ int main(int argc, char* argv[])
         fann_save(ann, FANN_F);
         wprintw(display, "done!\n");
         wrefresh(display);
-        //tempurature
-        wprintw(display, "Saving tempurature...");
+        //temperature
+        wprintw(display, "Saving temperature...");
         wrefresh(display);
         FILE* tempFile = fopen(TEMP_F, "w");
         fwrite(&temp, sizeof(double), 1, tempFile);

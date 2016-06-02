@@ -61,7 +61,7 @@ float compareInputs(input* input1, input* input2, int type)
         extractor.compute(img_2, keypoints_2, descriptors_2);
         if (descriptors_1.empty() || descriptors_2.empty())
         {
-            //no desciptors found, so just compare by color
+            //no descriptors found, so just compare by color
             FLANNtest = 0;
         }
         else

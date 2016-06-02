@@ -14,7 +14,7 @@
 #include <mcp3004.h>
 #include <errno.h>
 
-typedef struct instructions   //instructrions for robot from neural net
+typedef struct instructions   //instructions for robot from neural net
 {
     short int direction;
     short int  steering;

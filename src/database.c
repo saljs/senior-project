@@ -14,7 +14,7 @@
 #include <stdbool.h>
 #include <math.h>
 
-/* Returns a pointer to a sanitized new memory, or NULL on error. If you pass it a memory already part of a list it will append the the list, otherwise if it's passed NULL it will start a new list. */
+/* Returns a pointer to a sanitized new memory, or NULL on error. If you pass it a memory already part of a list it will append the list, otherwise if it's passed NULL it will start a new list. */
 memory* newMemory(memory* start)
 {
     memory* newMem = malloc(sizeof(memory));
@@ -72,7 +72,7 @@ void disassemble(memory* start)
     }
 }
 
-/* Parses over the database and links the inpout pattern. The database arg is the database to be searched, and the type is the index of the input pattern. */
+/* Parses over the database and links the input pattern. The database arg is the database to be searched, and the type is the index of the input pattern. */
 void linkInput(input* pattern, int type, memory* database)
 {
     float cost = 0, lastCost = 0, simConf = 0;
@@ -86,7 +86,7 @@ void linkInput(input* pattern, int type, memory* database)
         while(currInput != NULL) //iterate over all inputs in current memory
         {
             float similarity = compareInputs(pattern, currInput, type); //compare them with the pattern input
-            if(similarity > matchprob) //if the input is the most simalimar of all inputs in the memory so far, save it
+            if(similarity > matchprob) //if the input is the most similar of all inputs in the memory so far, save it
             {
                 matchprob = similarity;
                 tmpSim = currInput;
@@ -102,7 +102,7 @@ void linkInput(input* pattern, int type, memory* database)
         lastCost = cost;
         steps++;
         cost = steps / (matchprob + 1); //calculate algorithm cost
-        if(matchprob > BRANCH_LIMIT) //if the current memosry is more similar than the BRANCH_LIMIT, go to the linked memory instead of iterating linearly
+        if(matchprob > BRANCH_LIMIT) //if the current memory is more similar than the BRANCH_LIMIT, go to the linked memory instead of iterating linearly
         {
             memory* loop = next;
             while(loop->uuid > tmpSim->link)
@@ -116,7 +116,7 @@ void linkInput(input* pattern, int type, memory* database)
             }
             next = loop;
         }
-        else //iteralte over memory list linearly
+        else //iterate over memory list linearly
         {
             memory* tmp = next->next;
             next = tmp;
@@ -127,7 +127,7 @@ void linkInput(input* pattern, int type, memory* database)
     return;
 }
 
-/* Adds a new input to the memory list, decieding whether to append to current memory or create a new one. If newTrigger is not NULL and points to a bool, it will be set to true if there is a split, and false otherwise. Returns the start of the database, possibly changed, or NULL on error. */
+/* Adds a new input to the memory list, deciding whether to append to current memory or create a new one. If newTrigger is not NULL and points to a bool, it will be set to true if there is a split, and false otherwise. Returns the start of the database, possibly changed, or NULL on error. */
 memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger)
 {
     int count = 0;
@@ -307,7 +307,7 @@ memory* loadDatabase(const char* savefile)
     return first;
 }
 
-/* Saves the database to a savefile. Returns -1 on read errrors, and -2 if there's an error opening the file. */
+/* Saves the database to a savefile. Returns -1 on read errors, and -2 if there's an error opening the file. */
 int saveDatabase(const char* savefile, memory* start)
 {
     //open save file

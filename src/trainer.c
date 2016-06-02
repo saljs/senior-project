@@ -51,7 +51,7 @@ int main()
     }
 
     printf("Saving network.\n");
-    fann_save(ann, "nueral.net");
+    fann_save(ann, "neural.net");
 
     printf("Cleaning up.\n");
     fann_destroy_train(data);

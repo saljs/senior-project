@@ -110,7 +110,7 @@ input* getInput(int type, memory* database)
         linkInput(newInput, type, database);
         return newInput;
     }
-    //inpu #5 will be added maunally by the server
+    //input #5 will be added manually by the server
     return NULL;
 }
 
@@ -157,7 +157,7 @@ float compareInputs(input* input1, input* input2, int type)
         extractor.compute(img_2, keypoints_2, descriptors_2);
         if (descriptors_1.empty() || descriptors_2.empty())
         {
-            //no desciptors found, so just compare by color
+            //no descriptors found, so just compare by color
             FLANNtest = 0;
         }
         else

@@ -1,5 +1,5 @@
 /* p_database.h
- * This file is a parrelell version of
+ * This file is a parallel version of
  * database.c
  */
 
@@ -8,7 +8,6 @@
 #ifndef P_DATABASE_H_
 #define P_DATABASE_H_
 
-//memory* AddtoMem(input* newInput, int index, memory* database, bool* newTrigger);
 void p_compare();
 void p_linkInput(input* pattern, int type, memory* database, int world_size);
 

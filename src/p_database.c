@@ -101,7 +101,7 @@ void p_linkInput(input* pattern, int type, memory* database, int world_size)
                 {
                     //now wait for all those things to return
                     MPI_Wait(&handles[i], MPI_STATUS_IGNORE);
-                    if(similarity[i] > matchprob) //if the input is the most simalimar of all inputs in the memory so far, save it
+                    if(similarity[i] > matchprob) //if the input is the most similar of all inputs in the memory so far, save it
                     {
                         matchprob = similarity[i];
                         tmpSim = inputList[i];
@@ -142,7 +142,7 @@ void p_linkInput(input* pattern, int type, memory* database, int world_size)
             }
             next = loop;
         }
-        else //iteralte over memory list linearly
+        else //iterate over memory list linearly
         {
             memory* tmp = next->next;
             next = tmp;
@@ -176,7 +176,7 @@ void p_linkInput(input* pattern, int type, memory* database, int world_size)
         {
             //now wait for all those things to return
             MPI_Wait(&handles[i], MPI_STATUS_IGNORE);
-            if(similarity[i] > simConf) //if the input is the most simalimar of all inputs in the memory so far, save it
+            if(similarity[i] > simConf) //if the input is the most similar of all inputs in the memory so far, save it
             {
                 mostSim = uuidList[i];
                 simConf = similarity[i];
