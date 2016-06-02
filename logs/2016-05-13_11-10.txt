@@ -1,0 +1,9 @@
+Senior project log for 2016-05-13_11-10
+Time logged: 50
+Got way to busy doing stuff to worry about writing about it recently. I
+finished bulding my robot, works great, can even drive in a straight line. Now
+just for the software, which I've decieded to treat the robot's computer as a
+thin client. For the server aspect I plan to build a Beowulf cluster, if the
+people I'm waiting on for that get back to me on that ever. As for the robot,
+all the parts work a treat, it moves around, has working sensors, so pretty
+happy with that.

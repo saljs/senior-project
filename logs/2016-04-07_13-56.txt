@@ -1,0 +1,17 @@
+Senior project log for 2016-04-07_13-56
+Time logged: 34h
+Ok, so it's been a little while since I've logged anything, kind of got out of
+the habit. But I've got neural nets DOWN, and feel pretty great about
+simulated annealing, which has always made sense to me but now I feel good
+about programming it. I finished my old flight simulator game, my opponents
+now have the brain I've been meaning to give them for a couple years. I only
+finished it 30mins ago, so they're still super dumb and keep crashing into
+things, but I'm going to let it run for a couple days and see how they do. I
+also have a killer idea for my showcase product. I plan to rebuild a better
+version of my robot from my gennetic algorithms project, complete with full
+color camera, improved battery pack and a great brain. I plan to connect up my
+database structure to act as a memory, then pipe that along the inputs into a
+rather big neural network. That will then drive two motors and a simulated
+annealing algorithm will fine-tune the network. It'll be pretty great I think.
+
+useful article: http://katrinaeg.com/simulated-annealing.html

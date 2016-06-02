@@ -1,0 +1,4 @@
+Senior project log for 2016-04-08_12-41
+Time logged: 3h
+Drafted a parts list for my robot and made some preliminary sketches in
+SCAD. I had my 175 hr meeting this morning as well.

@@ -1,0 +1,8 @@
+Senior project log for 2016-03-17_14-45
+Time logged: 20
+Met with live resource via Skype, talked for like an hour. It was somewhat
+helpful I suppose. Then spent a lot of time learning and thinking. I learned
+about neural networks, backpropogation, and more on simulated annealing. I'm
+still playing around with those concepts by adding some AI to a flight
+simulator I started building a couple years ago. I feel like I kind of handle
+on this decision making stuff, and am gearing towards a final product.

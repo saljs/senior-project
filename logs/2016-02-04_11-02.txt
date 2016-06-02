@@ -1,0 +1,4 @@
+Senior project log for 2016-02-04_11-02
+Time logged: 1.5
+Went through and commented code better so that it's easier to read and
+understand. 
